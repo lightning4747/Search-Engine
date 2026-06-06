@@ -13,8 +13,13 @@
   "license": "ISC",
   "devDependencies": {
     "@types/node": "^25.9.1",
+    "@types/pg": "^8.20.0",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3",
     "vitest": "^4.1.8"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "pg": "^8.21.0"
   }
 }

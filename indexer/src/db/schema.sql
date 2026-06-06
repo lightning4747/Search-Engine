@@ -31,3 +31,12 @@ CREATE TABLE IF NOT EXISTS index_meta (
     avg_doc_length DOUBLE PRECISION DEFAULT 0.0 NOT NULL,
     last_indexed_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
+
+-- 4. Alter existing crawled_pages table to add columns required by the Indexer
+ALTER TABLE crawled_pages ADD COLUMN IF NOT EXISTS doc_length INT DEFAULT 0 NOT NULL;
+ALTER TABLE crawled_pages ADD COLUMN IF NOT EXISTS word_count INT DEFAULT 0 NOT NULL;
+ALTER TABLE crawled_pages ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true NOT NULL;
+ALTER TABLE crawled_pages ADD COLUMN IF NOT EXISTS indexed_at TIMESTAMPTZ;
+ALTER TABLE crawled_pages ADD COLUMN IF NOT EXISTS in_link_count INT DEFAULT 0 NOT NULL;
+ALTER TABLE crawled_pages ADD COLUMN IF NOT EXISTS out_link_count INT DEFAULT 0 NOT NULL;
+
