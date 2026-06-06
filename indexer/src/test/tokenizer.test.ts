@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { tokenize } from './tokenizer.js';
+import { tokenize } from '../tokenizer.js';
 
 describe('Tokenizer Module', () => {
   it('should return an empty array for empty or whitespace-only inputs', () => {
