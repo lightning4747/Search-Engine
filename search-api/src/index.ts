@@ -13,6 +13,8 @@ import { matchPhrase } from './query/phraseMatch.js';
 import { matchProximity } from './query/proximityMatch.js';
 import { rankDocuments } from './ranking/ranker.js';
 import { generateSnippet } from './ranking/snippet.js';
+import { loadTrie, trie } from './suggest/trieLoader.js';
+import { stem } from './query/stemmer.js';
 
 const app = express();
 
@@ -228,6 +230,33 @@ app.get('/stats', async (req, res) => {
   }
 });
 
+// GET /suggest Endpoint
+app.get('/suggest', (req, res) => {
+  const start = performance.now();
+  const q = req.query.q;
+  if (typeof q !== 'string' || !q) {
+    return res.json({ suggestions: [] });
+  }
+
+  // Normalize and stem prefix
+  const clean = q.toLowerCase().replace(/^[^a-z0-9]+/, '').replace(/[^a-z0-9]+$/, '');
+  if (!clean) {
+    return res.json({ suggestions: [] });
+  }
+  const stemmedPrefix = stem(clean);
+
+  // Search trie
+  const matches = trie.search(stemmedPrefix);
+  const suggestions = matches.slice(0, 8).map(m => m.term);
+
+  const elapsed = performance.now() - start;
+  if (elapsed > 10) {
+    console.warn(`[WARNING] /suggest lookup took ${elapsed.toFixed(2)}ms (exceeded 10ms budget)`);
+  }
+
+  return res.json({ suggestions });
+});
+
 // GET /document/:id Endpoint
 app.get('/document/:id', async (req, res) => {
   const idStr = req.params.id;
@@ -314,8 +343,13 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 
 let server: any;
 if (process.env.NODE_ENV !== 'test') {
-  server = app.listen(config.port, () => {
-    console.log(`Search API server listening on port ${config.port}`);
+  loadTrie().then(() => {
+    server = app.listen(config.port, () => {
+      console.log(`Search API server listening on port ${config.port}`);
+    });
+  }).catch(err => {
+    console.error('Fatal error during Search API startup:', err);
+    process.exit(1);
   });
 }
 

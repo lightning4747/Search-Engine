@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { app } from '../index.js';
 import { query } from '../db/client.js';
+import { loadTrie } from '../suggest/trieLoader.js';
 
 describe('Search API Endpoints', () => {
   let server: any;
@@ -51,10 +52,10 @@ describe('Search API Endpoints', () => {
     await query(`
       INSERT INTO terms (term, doc_frequency)
       VALUES 
-      ('express', 1),
+      ('express', 999999),
       ('search', 1),
       ('api', 2),
-      ('crawler', 1)
+      ('crawler', 999999)
     `);
 
     // Fetch term IDs
@@ -76,6 +77,9 @@ describe('Search API Endpoints', () => {
       (${apiId}, 996002, 1, 0, 1, '{1}'),
       (${crawlerId}, 996002, 1, 0, 1, '{0}')
     `);
+
+    // Load trie
+    await loadTrie();
 
     // 2. Start HTTP server on a random port
     return new Promise<void>((resolve) => {
@@ -176,6 +180,30 @@ describe('Search API Endpoints', () => {
       expect(res.status).toBe(200);
       const json = await res.json();
       expect(json.status).toBe('started');
+    });
+  });
+
+  describe('GET /suggest', () => {
+    it('should return empty list on missing parameter q', async () => {
+      const res = await fetch(`${baseUrl}/suggest`);
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      expect(json.suggestions).toEqual([]);
+    });
+
+    it('should successfully return autocompletions for a matching prefix', async () => {
+      const res = await fetch(`${baseUrl}/suggest?q=exp`);
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      expect(json.suggestions).toContain('express');
+    });
+
+    it('should stem and normalize prefix for lookup', async () => {
+      const res = await fetch(`${baseUrl}/suggest?q=Crawlers`);
+      expect(res.status).toBe(200);
+      const json = await res.json();
+      // 'Crawlers' is cleaned/stemmed to 'crawler' which matches the term 'crawler'
+      expect(json.suggestions).toContain('crawler');
     });
   });
 });
