@@ -70,6 +70,14 @@ describe('Normalizer Module', () => {
     ]);
   });
 
+  it('should filter out tokens longer than 255 characters', () => {
+    const longToken: Token = { text: 'a'.repeat(256), startChar: 0, endChar: 256, position: 0 };
+    const shortToken: Token = { text: 'a'.repeat(255), startChar: 257, endChar: 512, position: 1 };
+    
+    expect(normalizeToken(longToken)).toBeNull();
+    expect(normalizeToken(shortToken)).not.toBeNull();
+  });
+
   it('should ensure normalization is idempotent (running it again changes nothing)', () => {
     const token: Token = { text: 'Hello, World!', startChar: 0, endChar: 13, position: 0 };
     const step1 = normalizeToken(token);

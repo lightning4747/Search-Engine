@@ -32,6 +32,11 @@ export function normalizeToken(token: Token, options: NormalizerOptions = {}): T
 
   const normalizedText = lowerText.slice(leadingLength, lowerText.length - trailingLength);
 
+  // Filter out excessively long tokens (e.g. base64 or garbage data) to prevent index key size limits
+  if (normalizedText.length > 255) {
+    return null;
+  }
+
   // Filter out purely numeric tokens if option is enabled
   if (options.removeNumeric && /^\d+$/.test(normalizedText)) {
     return null;
