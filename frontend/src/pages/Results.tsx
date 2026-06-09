@@ -132,7 +132,7 @@ export default function Results() {
       <header style={styles.header} className="glass">
         <div style={styles.headerContent}>
           <Link to="/" style={styles.logoLink}>
-            ANTIGRAVITY<span style={styles.logoDot}>S</span>
+            Lightning <span style={styles.logoDot}>Search</span>
           </Link>
 
           <div ref={suggestRef} style={styles.searchBox}>

@@ -92,7 +92,7 @@ export default function Home() {
       <main style={styles.main}>
         <div style={styles.logoContainer}>
           <h1 style={styles.logoText}>
-            ANTIGRAVITY<span style={styles.logoDot}>SEARCH</span>
+            Lightning <span style={styles.logoDot}>Engine</span>
           </h1>
           <p style={styles.logoSubText}>Instant Positional Indexing Engine</p>
         </div>
@@ -101,7 +101,7 @@ export default function Home() {
         <div ref={containerRef} style={styles.searchBoxContainer}>
           <form onSubmit={handleSearchSubmit} style={styles.form}>
             <div style={{ ...styles.inputWrapper, ...(showSuggestions && suggestions.length > 0 ? styles.inputWrapperActive : {}) }}>
-              <span style={styles.searchIcon}>🔍</span>
+              <span style={styles.searchIcon}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-search"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg></span>
               <input
                 ref={inputRef}
                 type="text"
