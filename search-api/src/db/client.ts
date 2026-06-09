@@ -2,23 +2,19 @@ import pg from 'pg';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
+import { fileURLToPath } from 'url';
 
 // Look for .env in current directory, web-crawler directory, or parent directory
 const envPaths = [
   path.resolve(process.cwd(), '.env'),
   path.resolve(process.cwd(), '../web-crawler/.env'),
   path.resolve(process.cwd(), 'web-crawler/.env'),
-  path.resolve(path.dirname(new URL(import.meta.url).pathname), '../../../web-crawler/.env'),
+  path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../web-crawler/.env'),
 ];
 
 for (const envPath of envPaths) {
-  // Normalize windows path
-  let cleanPath = envPath;
-  if (cleanPath.startsWith('/') && process.platform === 'win32') {
-    cleanPath = cleanPath.slice(1);
-  }
-  if (fs.existsSync(cleanPath)) {
-    dotenv.config({ path: cleanPath });
+  if (fs.existsSync(envPath)) {
+    dotenv.config({ path: envPath });
     break;
   }
 }
