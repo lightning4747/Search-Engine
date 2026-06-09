@@ -15,6 +15,11 @@ describe('Metadata Database Operations', () => {
   it('should initialize and recalculate metadata within an isolated transaction', async () => {
     await query('BEGIN');
     try {
+      // Clear any leftover test rows first to prevent key conflicts and ensure clean measurements
+      await query('DELETE FROM postings WHERE doc_id >= 990000');
+      await query('DELETE FROM crawled_pages WHERE id >= 990000');
+      await query('DELETE FROM urls WHERE id >= 990000');
+
       // Get initial state of the database to make the test independent of existing data
       const initialRes = await query(
         'SELECT COUNT(*)::int as count, COALESCE(SUM(doc_length), 0)::float as sum FROM crawled_pages WHERE is_active = true'
@@ -35,9 +40,9 @@ describe('Metadata Database Operations', () => {
       await query(`
         INSERT INTO urls (id, url, domain, status)
         VALUES 
-        (999991, 'http://test1.com', 'test1.com', 'DONE'),
-        (999992, 'http://test2.com', 'test2.com', 'DONE'),
-        (999993, 'http://test3.com', 'test3.com', 'DONE')
+        (990001, 'http://test1.com', 'test1.com', 'DONE'),
+        (990002, 'http://test2.com', 'test2.com', 'DONE'),
+        (990003, 'http://test3.com', 'test3.com', 'DONE')
         ON CONFLICT (id) DO NOTHING
       `);
 
@@ -47,9 +52,9 @@ describe('Metadata Database Operations', () => {
       await query(`
         INSERT INTO crawled_pages (id, url_id, title, description, canonical_url, text_content, doc_length, word_count, is_active)
         VALUES 
-        (999991, 999991, 'Test 1', 'Desc', 'http://test1.com', 'Text', 10, 10, true),
-        (999992, 999992, 'Test 2', 'Desc', 'http://test2.com', 'Text', 20, 20, true),
-        (999993, 999993, 'Test 3', 'Desc', 'http://test3.com', 'Text', 50, 50, false)
+        (990001, 990001, 'Test 1', 'Desc', 'http://test1.com', 'Text', 10, 10, true),
+        (990002, 990002, 'Test 2', 'Desc', 'http://test2.com', 'Text', 20, 20, true),
+        (990003, 990003, 'Test 3', 'Desc', 'http://test3.com', 'Text', 50, 50, false)
         ON CONFLICT (id) DO NOTHING
       `);
 
