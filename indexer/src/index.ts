@@ -173,11 +173,13 @@ Options:
     let finalAvgDocLength = 0;
 
     if (!dryRun) {
-      console.log(`Recalculating metadata index stats...`);
+      console.log(`Recalculating metadata index stats (Task 1.12)...`);
+      const metaStartTime = Date.now();
       const finalStats = await recalculateMeta();
       finalDocCount = finalStats.doc_count;
       finalAvgDocLength = finalStats.avg_doc_length;
-      console.log(`Metadata updated: doc_count=${finalDocCount}, avg_doc_length=${finalAvgDocLength.toFixed(2)}`);
+      const metaElapsed = Date.now() - metaStartTime;
+      console.log(`Metadata updated: doc_count=${finalDocCount}, avg_doc_length=${finalAvgDocLength.toFixed(2)} (took ${metaElapsed}ms)`);
     } else {
       console.log(`[dry-run] Skipped metadata recalculation.`);
     }
