@@ -1,0 +1,112 @@
+import { pool } from './db/client.js';
+import { DocumentIndex } from './indexDocument.js';
+
+/**
+ * Writes a batch of DocumentIndex objects to the database inside a single transaction.
+ * Handles upserting into the terms table, clearing old postings for the doc_ids
+ * (for re-indexing safety), inserting new postings, updating term document frequencies,
+ * and marking the pages as indexed.
+ * 
+ * @param batch Array of DocumentIndex objects to write
+ */
+export async function writeIndexBatch(batch: DocumentIndex[]): Promise<void> {
+  if (batch.length === 0) return;
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const docIds = batch.map(d => d.docId);
+
+    // 1. Capture the term_ids associated with these documents BEFORE deleting their old postings.
+    // This is crucial to ensure that if a term is removed during re-indexing, its doc_frequency
+    // is correctly recalculated and updated (eventually to 0 if no other document contains it).
+    const oldTermIdsRes = await client.query(
+      'SELECT DISTINCT term_id FROM postings WHERE doc_id = ANY($1::int[])',
+      [docIds]
+    );
+    const affectedTermIds = new Set<number>(oldTermIdsRes.rows.map(r => r.term_id));
+
+    // 2. Collect all unique terms across all documents in this batch
+    const uniqueTerms = new Set<string>();
+    for (const doc of batch) {
+      for (const term of doc.terms.keys()) {
+        uniqueTerms.add(term);
+      }
+    }
+
+    // 3. Upsert unique terms and retrieve/cache their term_ids
+    const termIdMap = new Map<string, number>();
+    for (const term of uniqueTerms) {
+      const res = await client.query(
+        `INSERT INTO terms (term, doc_frequency) 
+         VALUES ($1, 0)
+         ON CONFLICT (term) DO UPDATE SET term = EXCLUDED.term
+         RETURNING term_id`,
+        [term]
+      );
+      const termId = res.rows[0].term_id;
+      termIdMap.set(term, termId);
+      affectedTermIds.add(termId); // Also mark this new/updated term as affected
+    }
+
+    // 4. Delete old postings for these docIds before inserting new ones (re-indexing safety)
+    await client.query(
+      'DELETE FROM postings WHERE doc_id = ANY($1::int[])',
+      [docIds]
+    );
+
+    // 5. Insert postings for each document
+    for (const doc of batch) {
+      for (const [term, info] of doc.terms.entries()) {
+        const termId = termIdMap.get(term);
+        if (termId === undefined) continue;
+
+        await client.query(
+          `INSERT INTO postings (term_id, doc_id, tf_title, tf_heading, tf_body, positions)
+           VALUES ($1, $2, $3, $4, $5, $6)
+           ON CONFLICT (term_id, doc_id) DO UPDATE SET
+             tf_title = EXCLUDED.tf_title,
+             tf_heading = EXCLUDED.tf_heading,
+             tf_body = EXCLUDED.tf_body,
+             positions = EXCLUDED.positions`,
+          [
+            termId,
+            doc.docId,
+            info.tf_title,
+            info.tf_heading,
+            info.tf_body,
+            info.positions,
+          ]
+        );
+      }
+    }
+
+    // 6. Update the doc_frequency for all terms that were affected (added, modified, or removed)
+    if (affectedTermIds.size > 0) {
+      await client.query(
+        `UPDATE terms t
+         SET doc_frequency = (
+           SELECT COUNT(*) FROM postings p WHERE p.term_id = t.term_id
+         )
+         WHERE t.term_id = ANY($1::int[])`,
+        [Array.from(affectedTermIds)]
+      );
+    }
+
+    // 7. Mark the crawled pages as indexed
+    await client.query(
+      `UPDATE crawled_pages
+       SET indexed_at = CURRENT_TIMESTAMP
+       WHERE id = ANY($1::int[])`,
+      [docIds]
+    );
+
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
