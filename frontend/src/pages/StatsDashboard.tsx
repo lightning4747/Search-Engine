@@ -72,7 +72,7 @@ export default function StatsDashboard() {
           </div>
         ) : error ? (
           <div style={styles.errorContainer} className="glass">
-            <h3>⚠️ Error</h3>
+            <h3>Error</h3>
             <p style={{ marginTop: '0.5rem' }}>{error}</p>
             <button onClick={fetchStats} style={styles.retryBtn}>Retry</button>
           </div>
@@ -143,7 +143,7 @@ export default function StatsDashboard() {
 
               {reindexError && (
                 <div style={styles.errorMessage}>
-                  <strong>⚠️ Error:</strong> {reindexError}
+                  <strong>Error:</strong> {reindexError}
                 </div>
               )}
             </div>

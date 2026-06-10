@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "test": "vitest run"
+    "test": "vitest run",
+    "compute-pagerank": "tsx scripts/compute-pagerank.ts"
   },
   "keywords": [],
   "author": "",

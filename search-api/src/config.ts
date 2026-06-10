@@ -30,6 +30,9 @@ export const config = {
     heading: parseFloat(process.env.BOOST_HEADING || '1.8'),
     body: parseFloat(process.env.BOOST_BODY || '1.0')
   },
+  authority: {
+    alpha: parseFloat(process.env.AUTHORITY_ALPHA || '0.2')
+  },
   xAdminKey: process.env.X_ADMIN_KEY || 'default_admin_key'
 };
 export type Config = typeof config;

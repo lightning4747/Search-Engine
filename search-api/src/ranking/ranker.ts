@@ -48,9 +48,12 @@ export function rankDocuments(
   docLengths: Map<number, number>,
   boosts: FieldBoosts = DEFAULT_FIELD_BOOSTS,
   k1?: number,
-  b?: number
+  b?: number,
+  authorityScores?: Map<number, number>,
+  alpha: number = 0.2
 ): RankedResult[] {
   const { doc_count: N, avg_doc_length: avgdl } = indexMeta;
+
 
   // 1. Find all doc_ids that contain any excluded terms to filter them out
   const excludedDocIds = new Set<number>();
@@ -100,7 +103,12 @@ export function rankDocuments(
   // 3. Convert to RankedResult array, sort descending by score
   const results: RankedResult[] = [];
   for (const [docId, score] of docScores.entries()) {
-    results.push({ doc_id: docId, score });
+    let finalScore = score;
+    if (authorityScores) {
+      const auth = authorityScores.get(docId) || 0.0;
+      finalScore = score * (1 + alpha * auth);
+    }
+    results.push({ doc_id: docId, score: finalScore });
   }
 
   return results.sort((a, b) => {

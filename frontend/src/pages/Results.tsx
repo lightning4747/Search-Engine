@@ -220,7 +220,6 @@ export default function Results() {
           </div>
         ) : error ? (
           <div style={styles.errorContainer} className="glass">
-            <span style={styles.errorIcon}>⚠️</span>
             <p>{error}</p>
           </div>
         ) : results.length === 0 ? (

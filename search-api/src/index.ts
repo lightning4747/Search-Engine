@@ -125,15 +125,17 @@ app.get('/search', async (req, res) => {
       ? { doc_count: Number(metaRes.rows[0].doc_count), avg_doc_length: Number(metaRes.rows[0].avg_doc_length) }
       : { doc_count: 0, avg_doc_length: 0.0 };
 
-    // 5. Fetch doc lengths for candidate docs
+    // 5. Fetch doc lengths and authority scores for candidate docs
     const docLengths = new Map<number, number>();
+    const authorityScores = new Map<number, number>();
     if (candidateDocIds.size > 0) {
-      const docLengthsRes = await query(
-        'SELECT id, doc_length FROM crawled_pages WHERE id = ANY($1::int[])',
+      const docRes = await query(
+        'SELECT id, doc_length, authority_score FROM crawled_pages WHERE id = ANY($1::int[])',
         [Array.from(candidateDocIds)]
       );
-      for (const r of docLengthsRes.rows) {
+      for (const r of docRes.rows) {
         docLengths.set(Number(r.id), Number(r.doc_length || 0));
+        authorityScores.set(Number(r.id), Number(r.authority_score || 0.0));
       }
     }
 
@@ -146,7 +148,9 @@ app.get('/search', async (req, res) => {
       docLengths,
       config.boosts,
       config.bm25.k1,
-      config.bm25.b
+      config.bm25.b,
+      authorityScores,
+      config.authority.alpha
     );
 
     // 7. Paginate

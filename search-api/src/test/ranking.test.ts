@@ -130,4 +130,33 @@ describe('Document Ranker Module', () => {
     expect(results[0].doc_id).toBe(1);
     expect(results[1].doc_id).toBe(2);
   });
+
+  it('should rank documents higher if they have higher PageRank authority scores', () => {
+    const plan: RetrievalPlan = {
+      must: ['term1'],
+      exclude: [],
+    };
+
+    const postings: PostingRow[] = [
+      { term: 'term1', doc_id: 1, tf_title: 1, tf_heading: 0, tf_body: 0, positions: [], df: 10 },
+      { term: 'term1', doc_id: 2, tf_title: 1, tf_heading: 0, tf_body: 0, positions: [], df: 10 },
+    ];
+
+    const equalDocLengths = new Map<number, number>([
+      [1, 50],
+      [2, 50],
+    ]);
+
+    const authorityScores = new Map<number, number>([
+      [1, 0.2],
+      [2, 0.8], // Higher authority
+    ]);
+
+    const results = rankDocuments(plan, postings, indexMeta, equalDocLengths, undefined, undefined, undefined, authorityScores, 0.5);
+
+    expect(results.length).toBe(2);
+    expect(results[0].doc_id).toBe(2);
+    expect(results[1].doc_id).toBe(1);
+    expect(results[0].score).toBeGreaterThan(results[1].score);
+  });
 });

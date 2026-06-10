@@ -44,9 +44,23 @@ body {
   font-family: var(--font-sans);
   background-color: hsl(var(--bg-main));
   color: hsl(var(--text-main));
-  line-height: 1.5;
+  line-height: 1.6; /* Slightly relaxed for better readability */
+  letter-spacing: -0.01em; /* Subtle tightening for a sharper body text */
+  
+  /* Advanced Font Rendering */
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale; /* Crisps up text on macOS */
+  text-rendering: optimizeLegibility; /* Enables proper ligatures and kerning */
+  
   overflow-y: scroll;
+}
+
+/* Sharp Headings Setup */
+h1, h2, h3, h4, h5, h6 {
+  color: hsl(var(--primary));
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.03em; /* Tighter tracking for headings creates a high-end look */
 }
 
 a {
@@ -104,6 +118,19 @@ button {
   padding: 2rem 1.5rem;
 }
 
+/* Subtle Text Utilities for emphasis */
+.text-sharp {
+  font-weight: 500;
+  color: hsl(var(--primary));
+}
+
+.text-gradient {
+  background: linear-gradient(180deg, hsl(var(--primary)) 0%, hsl(var(--text-muted)) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -120,10 +147,10 @@ button {
 }
 
 mark {
-  background: hsla(0, 0%, 100%, 0.14);
-  color: hsl(var(--text-main));
-  padding: 0.05rem 0.2rem;
-  border-radius: 2px;
+  background: hsla(0, 0%, 100%, 0.08); /* Reduced opacity for less aggressive highlighting */
+  color: hsl(var(--primary));
+  padding: 0.1rem 0.3rem;
+  border-radius: 4px;
   font-weight: 500;
-  border-bottom: 1px solid hsl(var(--text-main));
+  border-bottom: 1px solid hsla(0, 0%, 100%, 0.2); /* Softer underline */
 }
