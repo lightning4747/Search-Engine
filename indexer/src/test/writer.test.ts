@@ -48,13 +48,15 @@ describe('Batch Postings Writer Module', () => {
         terms: new Map([
           ['shared', { tf_title: 1, tf_heading: 0, tf_body: 1, positions: [0] }],
           ['unique1', { tf_title: 0, tf_heading: 1, tf_body: 0, positions: [] }]
-        ])
+        ]),
+        fingerprint: null
       },
       {
         docId: 992002,
         terms: new Map([
           ['shared', { tf_title: 0, tf_heading: 0, tf_body: 2, positions: [1, 5] }]
-        ])
+        ]),
+        fingerprint: null
       }
     ];
 
@@ -105,7 +107,8 @@ describe('Batch Postings Writer Module', () => {
         docId: 992001,
         terms: new Map([
           ['shared', { tf_title: 0, tf_heading: 0, tf_body: 3, positions: [2, 3, 4] }] // tf changed, positions changed, unique1 removed
-        ])
+        ]),
+        fingerprint: null
       }
     ];
 

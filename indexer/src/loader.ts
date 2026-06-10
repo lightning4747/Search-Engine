@@ -9,6 +9,7 @@ export interface Headings {
 export interface CrawledPage {
   id: number;
   url_id: number;
+  url: string;
   title: string | null;
   description: string | null;
   canonical_url: string | null;
@@ -31,11 +32,12 @@ export interface CrawledPage {
  */
 export async function loadUnindexedPages(batchSize: number = 500): Promise<CrawledPage[]> {
   const result = await query(
-    `SELECT id, url_id, title, description, canonical_url, headings, text_content, 
-            crawled_at, doc_length, word_count, is_active, indexed_at
-     FROM crawled_pages
-     WHERE is_active = true AND indexed_at IS NULL
-     ORDER BY id ASC
+    `SELECT cp.id, cp.url_id, u.url, cp.title, cp.description, cp.canonical_url, cp.headings, cp.text_content, 
+            cp.crawled_at, cp.doc_length, cp.word_count, cp.is_active, cp.indexed_at
+     FROM crawled_pages cp
+     JOIN urls u ON cp.url_id = u.id
+     WHERE cp.is_active = true AND cp.indexed_at IS NULL
+     ORDER BY cp.id ASC
      LIMIT $1`,
     [batchSize]
   );
@@ -43,6 +45,7 @@ export async function loadUnindexedPages(batchSize: number = 500): Promise<Crawl
   return result.rows.map(row => ({
     id: row.id,
     url_id: row.url_id,
+    url: row.url,
     title: row.title,
     description: row.description,
     canonical_url: row.canonical_url,

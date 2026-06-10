@@ -11,6 +11,7 @@ export interface TermInfo {
 export interface DocumentIndex {
   docId: number;
   terms: Map<string, TermInfo>;
+  fingerprint: string | null;
 }
 
 /**
@@ -22,6 +23,17 @@ export interface DocumentIndex {
  * @returns A DocumentIndex object ready for DB write
  */
 export function indexDocument(page: CrawledPage): DocumentIndex {
+  const threshold = parseInt(process.env.THIN_CONTENT_THRESHOLD || '50', 10);
+  
+  if (page.word_count < threshold) {
+    console.log(`[thin-content] Skipped indexing Doc ID ${page.id} (${page.url}) due to low word count: ${page.word_count} (threshold: ${threshold})`);
+    return {
+      docId: page.id,
+      terms: new Map<string, TermInfo>(),
+      fingerprint: null,
+    };
+  }
+
   const terms = new Map<string, TermInfo>();
 
   const getOrCreateTerm = (term: string): TermInfo => {
@@ -80,5 +92,6 @@ export function indexDocument(page: CrawledPage): DocumentIndex {
   return {
     docId: page.id,
     terms,
+    fingerprint: null,
   };
 }
