@@ -7,7 +7,10 @@
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
-    "compute-pagerank": "tsx scripts/compute-pagerank.ts"
+    "compute-pagerank": "tsx scripts/compute-pagerank.ts",
+    "migrate-positions": "tsx scripts/migrate-positions.ts",
+    "benchmark-compression": "tsx scripts/benchmark-compression.ts",
+    "compact": "tsx scripts/compact.ts"
   },
   "keywords": [],
   "author": "",
