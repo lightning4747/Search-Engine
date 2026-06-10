@@ -15,6 +15,9 @@ import { rankDocuments } from './ranking/ranker.js';
 import { generateSnippet } from './ranking/snippet.js';
 import { loadTrie, trie } from './suggest/trieLoader.js';
 import { stem } from './query/stemmer.js';
+import { suggestCorrection } from './query/spellCheck.js';
+import { getSynonyms } from './query/synonyms.js';
+
 
 const app = express();
 
@@ -64,6 +67,9 @@ app.get('/search', async (req, res) => {
     // 1. Parse query
     const plan = parseQuery(q);
 
+    // 1.5. Run spell check suggestion
+    const did_you_mean = suggestCorrection(q);
+
     // 2. Fetch postings for terms in plan
     const postings = await retrievePostings(plan);
 
@@ -75,10 +81,12 @@ app.get('/search', async (req, res) => {
       const docPostings = postings.filter(p => p.doc_id === docId);
       const docTerms = new Set(docPostings.map(p => p.term.toLowerCase()));
 
-      // 3.1 Check must terms (AND retrieval)
+      // 3.1 Check must terms (AND retrieval with synonym OR support)
       let matchesMust = true;
       for (const term of plan.must) {
-        if (!docTerms.has(term.toLowerCase())) {
+        const synonyms = getSynonyms(term.toLowerCase());
+        const termOrSynonymFound = docTerms.has(term.toLowerCase()) || synonyms.some(syn => docTerms.has(syn.toLowerCase()));
+        if (!termOrSynonymFound) {
           matchesMust = false;
           break;
         }
@@ -160,7 +168,8 @@ app.get('/search', async (req, res) => {
       authorityScores,
       config.authority.alpha,
       hotDocIds,
-      config.recencyMultiplier
+      config.recencyMultiplier,
+      config.synonymBoost
     );
 
     // 7. Paginate
@@ -214,6 +223,7 @@ app.get('/search', async (req, res) => {
       total_hits: totalHits,
       page,
       results,
+      did_you_mean,
       took_ms
     });
 

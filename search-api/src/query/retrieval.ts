@@ -2,6 +2,8 @@ import { query } from '../db/client.js';
 import { RetrievalPlan } from './parser.js';
 import { PostingRow } from '../ranking/ranker.js';
 import { decompressPositions } from './positionCompress.js';
+import { getSynonyms } from './synonyms.js';
+
 
 
 /**
@@ -17,6 +19,10 @@ export async function retrievePostings(plan: RetrievalPlan): Promise<PostingRow[
   
   for (const term of plan.must) {
     positiveTerms.add(term.toLowerCase());
+    const syns = getSynonyms(term.toLowerCase());
+    for (const syn of syns) {
+      positiveTerms.add(syn.toLowerCase());
+    }
   }
   for (const clause of plan.phrase) {
     for (const term of clause.terms) {

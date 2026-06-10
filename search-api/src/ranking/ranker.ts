@@ -1,4 +1,6 @@
 import { scoreFieldWeighted, FieldBoosts, DEFAULT_FIELD_BOOSTS } from './fieldBoost.js';
+import { getSynonyms } from '../query/synonyms.js';
+
 
 export interface PostingRow {
   term: string;
@@ -53,7 +55,8 @@ export function rankDocuments(
   authorityScores?: Map<number, number>,
   alpha: number = 0.2,
   hotDocIds?: Set<number>,
-  recencyMultiplier: number = 1.1
+  recencyMultiplier: number = 1.1,
+  synonymBoost: number = 0.5
 ): RankedResult[] {
   const { doc_count: N, avg_doc_length: avgdl } = indexMeta;
 
@@ -79,14 +82,26 @@ export function rankDocuments(
       continue;
     }
 
-    // Only score terms that are part of the 'must' retrieval plan
-    if (!mustTerms.has(p.term.toLowerCase())) {
+    let matchedExact = mustTerms.has(p.term.toLowerCase());
+    let matchedSynonym = false;
+
+    if (!matchedExact) {
+      for (const mustTerm of plan.must) {
+        const syns = getSynonyms(mustTerm.toLowerCase());
+        if (syns.includes(p.term.toLowerCase())) {
+          matchedSynonym = true;
+          break;
+        }
+      }
+    }
+
+    if (!matchedExact && !matchedSynonym) {
       continue;
     }
 
     const docLen = docLengths.get(p.doc_id) || 0;
 
-    const termScore = scoreFieldWeighted(
+    let termScore = scoreFieldWeighted(
       p.tf_title,
       p.tf_heading,
       p.tf_body,
@@ -98,6 +113,10 @@ export function rankDocuments(
       k1,
       b
     );
+
+    if (matchedSynonym) {
+      termScore = termScore * synonymBoost;
+    }
 
     const currentScore = docScores.get(p.doc_id) || 0;
     docScores.set(p.doc_id, currentScore + termScore);

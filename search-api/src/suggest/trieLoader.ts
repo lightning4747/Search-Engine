@@ -1,6 +1,8 @@
 import { PrefixTrie } from './trie.js';
 import { query } from '../db/client.js';
 import { performance } from 'perf_hooks';
+import { loadSynonyms } from '../query/synonyms.js';
+
 
 export const trie = new PrefixTrie();
 export const commonTerms: { term: string; docFrequency: number }[] = [];
@@ -35,6 +37,8 @@ export async function loadTrie(): Promise<void> {
         }
       }
     }
+
+    loadSynonyms();
 
     const elapsed = (performance.now() - start).toFixed(2);
     const endMemory = process.memoryUsage().heapUsed;

@@ -1,0 +1,6 @@
+{
+  "js": ["javascript"],
+  "javascript": ["js"],
+  "ts": ["typescript"],
+  "typescript": ["ts"]
+}

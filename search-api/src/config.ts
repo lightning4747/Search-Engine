@@ -34,6 +34,7 @@ export const config = {
     alpha: parseFloat(process.env.AUTHORITY_ALPHA || '0.2')
   },
   recencyMultiplier: parseFloat(process.env.RECENCY_BOOST_MULTIPLIER || '1.1'),
+  synonymBoost: parseFloat(process.env.SYNONYM_BOOST_MULTIPLIER || '0.5'),
   xAdminKey: process.env.X_ADMIN_KEY || 'default_admin_key'
 };
 export type Config = typeof config;
