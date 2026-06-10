@@ -51,7 +51,9 @@ export function rankDocuments(
   k1?: number,
   b?: number,
   authorityScores?: Map<number, number>,
-  alpha: number = 0.2
+  alpha: number = 0.2,
+  hotDocIds?: Set<number>,
+  recencyMultiplier: number = 1.1
 ): RankedResult[] {
   const { doc_count: N, avg_doc_length: avgdl } = indexMeta;
 
@@ -108,6 +110,9 @@ export function rankDocuments(
     if (authorityScores) {
       const auth = authorityScores.get(docId) || 0.0;
       finalScore = score * (1 + alpha * auth);
+    }
+    if (hotDocIds && hotDocIds.has(docId)) {
+      finalScore = finalScore * recencyMultiplier;
     }
     results.push({ doc_id: docId, score: finalScore });
   }

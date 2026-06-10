@@ -141,6 +141,14 @@ app.get('/search', async (req, res) => {
 
     // 6. Filter postings to candidate documents and rank them
     const filteredPostings = postings.filter(p => candidateDocIds.has(p.doc_id));
+
+    const hotDocIds = new Set<number>();
+    for (const p of filteredPostings) {
+      if (p.segment === 'hot') {
+        hotDocIds.add(p.doc_id);
+      }
+    }
+
     const ranked = rankDocuments(
       plan,
       filteredPostings,
@@ -150,7 +158,9 @@ app.get('/search', async (req, res) => {
       config.bm25.k1,
       config.bm25.b,
       authorityScores,
-      config.authority.alpha
+      config.authority.alpha,
+      hotDocIds,
+      config.recencyMultiplier
     );
 
     // 7. Paginate

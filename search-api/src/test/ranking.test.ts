@@ -73,18 +73,18 @@ describe('Document Ranker Module', () => {
 
     const postings: PostingRow[] = [
       // Doc 1 matches term1 and term2
-      { term: 'term1', doc_id: 1, tf_title: 1, tf_heading: 0, tf_body: 2, positions: [5, 12], df: 10 },
-      { term: 'term2', doc_id: 1, tf_title: 0, tf_heading: 1, tf_body: 1, positions: [18], df: 20 },
+      { term: 'term1', doc_id: 1, tf_title: 1, tf_heading: 0, tf_body: 2, positions: [5, 12], df: 10, segment: 'cold' },
+      { term: 'term2', doc_id: 1, tf_title: 0, tf_heading: 1, tf_body: 1, positions: [18], df: 20, segment: 'cold' },
 
       // Doc 2 matches term1
-      { term: 'term1', doc_id: 2, tf_title: 0, tf_heading: 0, tf_body: 1, positions: [8], df: 10 },
+      { term: 'term1', doc_id: 2, tf_title: 0, tf_heading: 0, tf_body: 1, positions: [8], df: 10, segment: 'cold' },
 
       // Doc 3 matches term1 and term2 but contains the excluded term 'spam'
-      { term: 'term1', doc_id: 3, tf_title: 1, tf_heading: 1, tf_body: 5, positions: [1, 2, 3, 4, 5], df: 10 },
-      { term: 'spam', doc_id: 3, tf_title: 0, tf_heading: 0, tf_body: 1, positions: [100], df: 5 },
+      { term: 'term1', doc_id: 3, tf_title: 1, tf_heading: 1, tf_body: 5, positions: [1, 2, 3, 4, 5], df: 10, segment: 'cold' },
+      { term: 'spam', doc_id: 3, tf_title: 0, tf_heading: 0, tf_body: 1, positions: [100], df: 5, segment: 'cold' },
 
       // Doc 4 matches term2
-      { term: 'term2', doc_id: 4, tf_title: 1, tf_heading: 0, tf_body: 0, positions: [], df: 20 },
+      { term: 'term2', doc_id: 4, tf_title: 1, tf_heading: 0, tf_body: 0, positions: [], df: 20, segment: 'cold' },
     ];
 
     const results = rankDocuments(plan, postings, indexMeta, docLengths);
@@ -112,8 +112,8 @@ describe('Document Ranker Module', () => {
 
     // Docs 1 and 2 have identical features/postings and lengths
     const postings: PostingRow[] = [
-      { term: 'term1', doc_id: 2, tf_title: 1, tf_heading: 0, tf_body: 0, positions: [], df: 10 },
-      { term: 'term1', doc_id: 1, tf_title: 1, tf_heading: 0, tf_body: 0, positions: [], df: 10 },
+      { term: 'term1', doc_id: 2, tf_title: 1, tf_heading: 0, tf_body: 0, positions: [], df: 10, segment: 'cold' },
+      { term: 'term1', doc_id: 1, tf_title: 1, tf_heading: 0, tf_body: 0, positions: [], df: 10, segment: 'cold' },
     ];
 
     const equalDocLengths = new Map<number, number>([
@@ -138,8 +138,8 @@ describe('Document Ranker Module', () => {
     };
 
     const postings: PostingRow[] = [
-      { term: 'term1', doc_id: 1, tf_title: 1, tf_heading: 0, tf_body: 0, positions: [], df: 10 },
-      { term: 'term1', doc_id: 2, tf_title: 1, tf_heading: 0, tf_body: 0, positions: [], df: 10 },
+      { term: 'term1', doc_id: 1, tf_title: 1, tf_heading: 0, tf_body: 0, positions: [], df: 10, segment: 'cold' },
+      { term: 'term1', doc_id: 2, tf_title: 1, tf_heading: 0, tf_body: 0, positions: [], df: 10, segment: 'cold' },
     ];
 
     const equalDocLengths = new Map<number, number>([
@@ -158,5 +158,34 @@ describe('Document Ranker Module', () => {
     expect(results[0].doc_id).toBe(2);
     expect(results[1].doc_id).toBe(1);
     expect(results[0].score).toBeGreaterThan(results[1].score);
+  });
+
+  it('should apply recency boost multiplier for documents in the hot segment', () => {
+    const plan: RetrievalPlan = {
+      must: ['term1'],
+      exclude: [],
+    };
+
+    const postings: PostingRow[] = [
+      { term: 'term1', doc_id: 1, tf_title: 1, tf_heading: 0, tf_body: 0, positions: [], df: 10, segment: 'cold' },
+      { term: 'term1', doc_id: 2, tf_title: 1, tf_heading: 0, tf_body: 0, positions: [], df: 10, segment: 'hot' }, // In hot segment
+    ];
+
+    const equalDocLengths = new Map<number, number>([
+      [1, 50],
+      [2, 50],
+    ]);
+
+    const hotDocIds = new Set<number>([2]);
+
+    // Rank without boost (hotDocIds = empty) -> should have equal scores
+    const resultsNoBoost = rankDocuments(plan, postings, indexMeta, equalDocLengths, undefined, undefined, undefined, undefined, 0.2, new Set(), 1.5);
+    expect(resultsNoBoost[0].score).toEqual(resultsNoBoost[1].score);
+
+    // Rank with boost (hotDocIds = [2], multiplier = 1.5) -> Doc 2 should outrank Doc 1 by 1.5 times
+    const resultsWithBoost = rankDocuments(plan, postings, indexMeta, equalDocLengths, undefined, undefined, undefined, undefined, 0.2, hotDocIds, 1.5);
+    expect(resultsWithBoost.length).toBe(2);
+    expect(resultsWithBoost[0].doc_id).toBe(2);
+    expect(resultsWithBoost[0].score).toBeCloseTo(resultsWithBoost[1].score * 1.5, 5);
   });
 });
