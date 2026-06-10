@@ -84,10 +84,6 @@ export default function StatsDashboard() {
               <span style={styles.statsValue}>{stats.doc_count}</span>
             </div>
 
-            <div style={styles.statsCard} className="glass">
-              <span style={styles.statsLabel}>Avg Document Length (tokens)</span>
-              <span style={styles.statsValue}>{stats.avg_doc_length.toFixed(1)}</span>
-            </div>
 
             <div style={styles.statsCard} className="glass">
               <span style={styles.statsLabel}>Total Term Vocabulary Size</span>
@@ -213,7 +209,7 @@ const styles: Record<string, CSSProperties> = {
   },
   grid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(2, 1fr)',
+    gridTemplateColumns: 'repeat(3, 1fr)',
     gap: '1.5rem',
   },
   statsCard: {
@@ -236,7 +232,7 @@ const styles: Record<string, CSSProperties> = {
     color: 'hsl(var(--secondary))',
   },
   controlCard: {
-    gridColumn: 'span 2',
+    gridColumn: 'span 3',
     padding: '2rem',
     borderRadius: '16px',
     marginTop: '1rem',

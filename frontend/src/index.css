@@ -92,10 +92,24 @@ a:hover {
 }
 
 .glass {
-  background: hsla(var(--bg-card), 0.9);
+  background: hsl(var(--bg-card) / 0.95);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border: 1px solid hsl(var(--border-color));
+}
+
+/* Suggestions Dropdown: must appear on top, be non-transparent, and only show when focused */
+ul[role="listbox"].glass {
+  display: none !important;
+  background: hsl(var(--bg-card)) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  z-index: 9999 !important;
+}
+
+/* Only show suggestions when search box container has focus */
+form:focus-within > ul[role="listbox"].glass {
+  display: block !important;
 }
 
 .glow-primary:focus-within {

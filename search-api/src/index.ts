@@ -239,13 +239,28 @@ app.get('/stats', async (req, res) => {
     const metaRes = await query('SELECT doc_count, avg_doc_length, last_indexed_at FROM index_meta WHERE id = 1 LIMIT 1');
     const termsRes = await query('SELECT COUNT(*)::int as total_terms FROM terms');
 
-    const meta = metaRes.rows[0] || { doc_count: 0, avg_doc_length: 0.0, last_indexed_at: null };
+    let meta = metaRes.rows[0] || { doc_count: 0, avg_doc_length: 0.0, last_indexed_at: null };
+    
+    // Fallback if index_meta is empty or doc_count is 0 but we have indexed pages
+    if (Number(meta.doc_count) === 0) {
+      const fallbackRes = await query(
+        'SELECT COUNT(*)::int as count, MAX(indexed_at) as last_indexed FROM crawled_pages WHERE is_active = true AND indexed_at IS NOT NULL'
+      );
+      if (fallbackRes.rows.length > 0 && fallbackRes.rows[0].count > 0) {
+        meta = {
+          doc_count: fallbackRes.rows[0].count,
+          avg_doc_length: meta.avg_doc_length,
+          last_indexed_at: fallbackRes.rows[0].last_indexed
+        };
+      }
+    }
+
     const total_terms = termsRes.rows[0]?.total_terms || 0;
 
     return res.json({
       doc_count: Number(meta.doc_count),
       avg_doc_length: Number(meta.avg_doc_length),
-      last_indexed_at: meta.last_indexed_at ? meta.last_indexed_at.toISOString() : null,
+      last_indexed_at: meta.last_indexed_at ? new Date(meta.last_indexed_at).toISOString() : null,
       total_terms
     });
   } catch (err) {

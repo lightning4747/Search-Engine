@@ -172,7 +172,8 @@ export default function Results() {
                       key={suggestion}
                       role="option"
                       aria-selected={index === activeIndex}
-                      onClick={() => {
+                      onMouseDown={(e) => {
+                        e.preventDefault();
                         setInputVal(suggestion);
                         setShowSuggestions(false);
                         setSearchParams({ q: suggestion, page: '1' });

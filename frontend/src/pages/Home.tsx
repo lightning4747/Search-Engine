@@ -8,17 +8,8 @@ export default function Home() {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
-  const [stats, setStats] = useState<{ doc_count: number } | null>(null);
-
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  // Fetch brief index stats for home page footer
-  useEffect(() => {
-    apiClient.getStats()
-      .then(res => setStats(res))
-      .catch(() => {});
-  }, []);
 
   // Fetch suggestions with a debounce
   useEffect(() => {
@@ -144,13 +135,16 @@ export default function Home() {
                     key={suggestion}
                     role="option"
                     aria-selected={index === activeIndex}
-                    onClick={() => selectSuggestion(suggestion)}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      selectSuggestion(suggestion);
+                    }}
                     style={{
                       ...styles.suggestionItem,
                       ...(index === activeIndex ? styles.suggestionItemActive : {})
                     }}
                   >
-                    <span style={styles.suggestSearchIcon}>🔍</span>
+                    <span style={styles.suggestSearchIcon}></span>
                     {suggestion}
                   </li>
                 ))}
@@ -159,13 +153,6 @@ export default function Home() {
           </form>
         </div>
       </main>
-
-      {/* Footer statistics */}
-      {stats && (
-        <footer style={styles.footer}>
-          Indexed corpus size: <strong style={{ color: 'hsl(var(--success))' }}>{stats.doc_count}</strong> active pages
-        </footer>
-      )}
     </div>
   );
 }

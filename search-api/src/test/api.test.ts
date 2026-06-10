@@ -8,6 +8,7 @@ import { compressPositions } from '../query/positionCompress.js';
 describe('Search API Endpoints', () => {
   let server: any;
   let baseUrl: string;
+  let originalMeta: any = null;
 
   const minId = 996000;
   const maxId = 997000;
@@ -22,6 +23,13 @@ describe('Search API Endpoints', () => {
   beforeAll(async () => {
     // 1. Setup test data
     await query('SELECT 1');
+    
+    // Save original index_meta row
+    const metaRes = await query('SELECT doc_count, avg_doc_length, last_indexed_at FROM index_meta WHERE id = 1');
+    if (metaRes.rows.length > 0) {
+      originalMeta = metaRes.rows[0];
+    }
+
     await cleanup();
 
     // Insert dummy URLs
@@ -107,6 +115,22 @@ describe('Search API Endpoints', () => {
 
   afterAll(async () => {
     await cleanup();
+
+    // Restore original index_meta row
+    if (originalMeta) {
+      await query(
+        `INSERT INTO index_meta (id, doc_count, avg_doc_length, last_indexed_at)
+         VALUES (1, $1, $2, $3)
+         ON CONFLICT (id) DO UPDATE SET
+           doc_count = EXCLUDED.doc_count,
+           avg_doc_length = EXCLUDED.avg_doc_length,
+           last_indexed_at = EXCLUDED.last_indexed_at`,
+        [originalMeta.doc_count, originalMeta.avg_doc_length, originalMeta.last_indexed_at]
+      );
+    } else {
+      await query('DELETE FROM index_meta WHERE id = 1');
+    }
+
     return new Promise<void>((resolve) => {
       server.close(() => {
         resolve();
