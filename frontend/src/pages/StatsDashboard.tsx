@@ -1,4 +1,4 @@
-import { useState, useEffect, type FormEvent, type CSSProperties } from 'react';
+import { useState, useEffect, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiClient, type StatsResponse } from '../api/client';
 
@@ -8,12 +8,6 @@ export default function StatsDashboard() {
   const [stats, setStats] = useState<StatsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Admin trigger state
-  const [adminKey, setAdminKey] = useState('');
-  const [reindexStatus, setReindexStatus] = useState<string | null>(null);
-  const [reindexError, setReindexError] = useState<string | null>(null);
-  const [reindexLoading, setReindexLoading] = useState(false);
 
   const fetchStats = () => {
     setLoading(true);
@@ -33,27 +27,7 @@ export default function StatsDashboard() {
     fetchStats();
   }, []);
 
-  const handleReindex = (e: FormEvent) => {
-    e.preventDefault();
-    if (!adminKey.trim()) return;
 
-    setReindexLoading(true);
-    setReindexStatus(null);
-    setReindexError(null);
-
-    apiClient.triggerReindex(adminKey.trim())
-      .then(res => {
-        setReindexStatus(res.message || 'Incremental indexing run triggered successfully.');
-        setReindexLoading(false);
-        // Refresh stats after a short delay
-        setTimeout(fetchStats, 2000);
-      })
-      .catch(err => {
-        console.error(err);
-        setReindexError(err.message || 'Failed to trigger re-indexing. Check your admin API key.');
-        setReindexLoading(false);
-      });
-  };
 
   return (
     <div style={styles.page}>
@@ -101,48 +75,6 @@ export default function StatsDashboard() {
               </span>
             </div>
 
-            {/* Admin Control Panel */}
-            <div style={styles.controlCard} className="glass">
-              <h3 style={styles.panelTitle}>Trigger Incremental Indexing</h3>
-              <p style={styles.panelDesc}>
-                Spawn the crawler indexer command in the background to build posts for newly crawled pages.
-              </p>
-              
-              <form onSubmit={handleReindex} style={styles.form}>
-                <div style={styles.inputWrapper}>
-                  <input
-                    type="password"
-                    value={adminKey}
-                    onChange={(e) => setAdminKey(e.target.value)}
-                    placeholder="Enter Admin API Key..."
-                    style={styles.input}
-                    disabled={reindexLoading}
-                  />
-                  <button
-                    type="submit"
-                    style={{
-                      ...styles.submitBtn,
-                      ...(reindexLoading ? styles.submitBtnDisabled : {})
-                    }}
-                    disabled={reindexLoading}
-                  >
-                    {reindexLoading ? 'Triggering...' : 'Trigger Run'}
-                  </button>
-                </div>
-              </form>
-
-              {reindexStatus && (
-                <div style={styles.successMessage}>
-                  <strong>✓ Success:</strong> {reindexStatus}
-                </div>
-              )}
-
-              {reindexError && (
-                <div style={styles.errorMessage}>
-                  <strong>Error:</strong> {reindexError}
-                </div>
-              )}
-            </div>
           </div>
         ) : null}
       </main>
@@ -231,70 +163,5 @@ const styles: Record<string, CSSProperties> = {
     fontWeight: 700,
     color: 'hsl(var(--secondary))',
   },
-  controlCard: {
-    gridColumn: 'span 3',
-    padding: '2rem',
-    borderRadius: '16px',
-    marginTop: '1rem',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.8rem',
-  },
-  panelTitle: {
-    fontSize: '1.25rem',
-    fontWeight: 600,
-  },
-  panelDesc: {
-    fontSize: '0.95rem',
-    color: 'hsl(var(--text-muted))',
-  },
-  form: {
-    marginTop: '0.5rem',
-    width: '100%',
-  },
-  inputWrapper: {
-    display: 'flex',
-    gap: '1rem',
-    width: '100%',
-  },
-  input: {
-    flex: 1,
-    backgroundColor: 'hsla(var(--bg-card), 0.5)',
-    border: '1px solid hsl(var(--border-color))',
-    borderRadius: '8px',
-    padding: '0.6rem 1rem',
-    color: 'hsl(var(--text-main))',
-    fontSize: '1rem',
-    outline: 'none',
-  },
-  submitBtn: {
-    backgroundColor: 'hsl(var(--primary))',
-    color: 'hsl(var(--text-main))',
-    fontWeight: 600,
-    padding: '0.6rem 1.5rem',
-    borderRadius: '8px',
-    boxShadow: '0 0 15px var(--primary-glow)',
-  },
-  submitBtnDisabled: {
-    opacity: 0.5,
-    cursor: 'not-allowed',
-  },
-  successMessage: {
-    padding: '0.8rem 1rem',
-    backgroundColor: 'rgba(46, 204, 113, 0.1)',
-    border: '1px solid #2ecc71',
-    color: '#2ecc71',
-    borderRadius: '8px',
-    marginTop: '0.5rem',
-    fontSize: '0.95rem',
-  },
-  errorMessage: {
-    padding: '0.8rem 1rem',
-    backgroundColor: 'hsla(var(--error), 0.1)',
-    border: '1px solid hsl(var(--error))',
-    color: 'hsl(var(--error))',
-    borderRadius: '8px',
-    marginTop: '0.5rem',
-    fontSize: '0.95rem',
-  },
+
 };
