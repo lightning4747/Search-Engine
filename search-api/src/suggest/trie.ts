@@ -31,6 +31,20 @@ export class PrefixTrie {
   }
 
   /**
+   * Returns true if the exact term exists in the trie.
+   */
+  exists(term: string): boolean {
+    if (!term) return false;
+    let node = this.root;
+    for (const char of term) {
+      const nextNode = node.children.get(char);
+      if (!nextNode) return false;
+      node = nextNode;
+    }
+    return node.term === term;
+  }
+
+  /**
    * Searches for all terms in the trie that start with the given prefix.
    * Returns them sorted by docFrequency descending (and alphabetically as secondary sort).
    */
