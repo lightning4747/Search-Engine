@@ -1,6 +1,6 @@
-# Lightning Positional Search Engine
+# Search Engine
 
-An elegant, high-performance, and lightweight search engine with positional indexing, real-time query parsing (must-terms, exact phrases, proximity matching, exclusions), spell-checking, synonym expansion, and authority-based ranking (PageRank).
+A lightweight search engine with positional indexing, real-time query parsing (must-terms, exact phrases, proximity matching, exclusions), spell-checking, synonym expansion, and authority-based ranking (PageRank).
 
 This search engine is designed to run on top of crawled page databases [Web Crawler Repository](https://github.com/lightning4747/Web-crawler).
 
