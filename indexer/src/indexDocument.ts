@@ -1,5 +1,7 @@
 import { CrawledPage } from './loader.js';
 import { processText } from './pipeline.js';
+import { computeSimHash } from './dedup/fingerprint.js';
+
 
 export interface TermInfo {
   tf_title: number;
@@ -89,9 +91,11 @@ export function indexDocument(page: CrawledPage): DocumentIndex {
     }
   }
 
+  const fingerprint = computeSimHash(Array.from(terms.keys()));
+
   return {
     docId: page.id,
     terms,
-    fingerprint: null,
+    fingerprint,
   };
 }

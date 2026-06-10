@@ -1,8 +1,10 @@
 import { query, closePool, pool } from './db/client.js';
 import { loadUnindexedPages, CrawledPage } from './loader.js';
-import { indexDocument } from './indexDocument.js';
+import { indexDocument, type DocumentIndex } from './indexDocument.js';
 import { writeIndexBatch } from './writer.js';
 import { initializeMeta, recalculateMeta } from './meta.js';
+import { hammingDistance } from './dedup/fingerprint.js';
+
 
 async function main() {
   const args = process.argv.slice(2);
@@ -60,7 +62,7 @@ Options:
           await client.query('DELETE FROM postings');
           await client.query('DELETE FROM terms');
           await client.query('DELETE FROM index_meta');
-          await client.query('UPDATE crawled_pages SET indexed_at = NULL WHERE is_active = true');
+          await client.query('UPDATE crawled_pages SET indexed_at = NULL, doc_fingerprint = NULL WHERE is_active = true');
           await client.query('COMMIT');
           console.log(`Index cleared successfully.`);
           startTermCount = 0; // Since terms table is cleared
@@ -87,6 +89,18 @@ Options:
 
     console.log(`Total documents to index: ${totalUnindexed}`);
     const totalBatches = Math.ceil(totalUnindexed / batchSize);
+
+    // Load existing fingerprints from DB for near-duplicate detection
+    const existingFingerprints = new Map<number, string>();
+    if (!dryRun) {
+      const fingerprintRes = await query(
+        'SELECT id, doc_fingerprint FROM crawled_pages WHERE is_active = true AND doc_fingerprint IS NOT NULL'
+      );
+      for (const row of fingerprintRes.rows) {
+        existingFingerprints.set(Number(row.id), row.doc_fingerprint);
+      }
+      console.log(`Loaded ${existingFingerprints.size} existing document fingerprints for deduplication.`);
+    }
 
     // 4. Batch indexing loop
     let totalIndexedDocs = 0;
@@ -158,7 +172,29 @@ Options:
       if (pages.length === 0) break;
 
       const batchStartTime = Date.now();
-      const documentIndices = pages.map(indexDocument);
+      const documentIndices: DocumentIndex[] = [];
+      const duplicateThreshold = parseInt(process.env.DUPLICATE_DETECTION_THRESHOLD || '3', 10);
+
+      for (const page of pages) {
+        const docIndex = indexDocument(page);
+
+        if (docIndex.fingerprint) {
+          let isDuplicate = false;
+          for (const [otherDocId, otherFingerprint] of existingFingerprints.entries()) {
+            const dist = hammingDistance(docIndex.fingerprint, otherFingerprint);
+            if (dist <= duplicateThreshold) {
+              console.log(`[near-duplicate] Skipped indexing Doc ID ${page.id} (${page.url}) - near-duplicate of Doc ID ${otherDocId} (Hamming distance: ${dist}, threshold: ${duplicateThreshold})`);
+              docIndex.terms.clear(); // Clear terms so postings are not created
+              isDuplicate = true;
+              break;
+            }
+          }
+          if (!isDuplicate) {
+            existingFingerprints.set(docIndex.docId, docIndex.fingerprint);
+          }
+        }
+        documentIndices.push(docIndex);
+      }
 
       if (!dryRun) {
         await writeIndexBatch(documentIndices);

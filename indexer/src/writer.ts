@@ -94,12 +94,20 @@ export async function writeIndexBatch(batch: DocumentIndex[]): Promise<void> {
       );
     }
 
-    // 7. Mark the crawled pages as indexed
+    // 7. Mark the crawled pages as indexed and save their fingerprints
+    const fingerprints = batch.map(d => d.fingerprint);
     await client.query(
-      `UPDATE crawled_pages
-       SET indexed_at = CURRENT_TIMESTAMP
-       WHERE id = ANY($1::int[])`,
-      [docIds]
+      `UPDATE crawled_pages AS cp
+       SET 
+         indexed_at = CURRENT_TIMESTAMP,
+         doc_fingerprint = val.doc_fingerprint
+       FROM (
+         SELECT 
+           UNNEST($1::int[]) AS id,
+           UNNEST($2::text[]) AS doc_fingerprint
+       ) AS val
+       WHERE cp.id = val.id`,
+      [docIds, fingerprints]
     );
 
     await client.query('COMMIT');
