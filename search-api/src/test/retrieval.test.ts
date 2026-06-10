@@ -2,6 +2,8 @@ import { describe, it, expect, afterAll, beforeAll } from 'vitest';
 import { query, pool } from '../db/client.js';
 import { retrievePostings } from '../query/retrieval.js';
 import { RetrievalPlan } from '../query/parser.js';
+import { compressPositions } from '../query/positionCompress.js';
+
 
 describe('Postings Retrieval Module', () => {
   const minId = 994000;
@@ -55,14 +57,22 @@ describe('Postings Retrieval Module', () => {
     // Insert postings
     // Doc 994001: typescript (tf_body = 2), generics (tf_body = 1)
     // Doc 994002: generics (tf_body = 3), exclusion (tf_body = 1)
-    await query(`
-      INSERT INTO postings (term_id, doc_id, tf_title, tf_heading, tf_body, positions)
-      VALUES 
-      (${typescriptId}, 994001, 1, 0, 2, '{0, 4}'),
-      (${genericsId}, 994001, 0, 1, 1, '{2}'),
-      (${genericsId}, 994002, 1, 0, 3, '{1, 3, 5}'),
-      (${exclusionId}, 994002, 0, 0, 1, '{0}')
-    `);
+    await query(
+      `INSERT INTO postings (term_id, doc_id, tf_title, tf_heading, tf_body, positions) VALUES ($1, $2, $3, $4, $5, $6)`,
+      [typescriptId, 994001, 1, 0, 2, compressPositions([0, 4])]
+    );
+    await query(
+      `INSERT INTO postings (term_id, doc_id, tf_title, tf_heading, tf_body, positions) VALUES ($1, $2, $3, $4, $5, $6)`,
+      [genericsId, 994001, 0, 1, 1, compressPositions([2])]
+    );
+    await query(
+      `INSERT INTO postings (term_id, doc_id, tf_title, tf_heading, tf_body, positions) VALUES ($1, $2, $3, $4, $5, $6)`,
+      [genericsId, 994002, 1, 0, 3, compressPositions([1, 3, 5])]
+    );
+    await query(
+      `INSERT INTO postings (term_id, doc_id, tf_title, tf_heading, tf_body, positions) VALUES ($1, $2, $3, $4, $5, $6)`,
+      [exclusionId, 994002, 0, 0, 1, compressPositions([0])]
+    );
   });
 
   afterAll(async () => {

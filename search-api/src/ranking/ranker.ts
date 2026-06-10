@@ -8,6 +8,7 @@ export interface PostingRow {
   tf_body: number;
   positions: number[];
   df: number; // Document frequency of the term in the corpus
+  segment: 'hot' | 'cold';
 }
 
 export interface IndexMeta {

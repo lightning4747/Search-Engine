@@ -2,6 +2,8 @@ import { describe, it, expect, afterAll, beforeAll } from 'vitest';
 import { query, pool } from '../db/client.js';
 import { writeIndexBatch } from '../writer.js';
 import { DocumentIndex } from '../indexDocument.js';
+import { decompressPositions } from '../compression/positionCompress.js';
+
 
 describe('Batch Postings Writer Module', () => {
   const minId = 992000;
@@ -85,7 +87,7 @@ describe('Batch Postings Writer Module', () => {
     expect(p1).toBeDefined();
     expect(p1.tf_title).toBe(1);
     expect(p1.tf_body).toBe(1);
-    expect(p1.positions).toEqual([0]);
+    expect(decompressPositions(p1.positions)).toEqual([0]);
 
     const p2 = postingsRes.rows.find(p => p.doc_id === 992001 && p.term_id === uniqueTermId);
     expect(p2).toBeDefined();
@@ -94,7 +96,7 @@ describe('Batch Postings Writer Module', () => {
     const p3 = postingsRes.rows.find(p => p.doc_id === 992002 && p.term_id === sharedTermId);
     expect(p3).toBeDefined();
     expect(p3.tf_body).toBe(2);
-    expect(p3.positions).toEqual([1, 5]);
+    expect(decompressPositions(p3.positions)).toEqual([1, 5]);
 
     // Verify indexed_at is not null
     const pagesRes = await query('SELECT id, indexed_at FROM crawled_pages WHERE id >= 992000');
@@ -131,6 +133,6 @@ describe('Batch Postings Writer Module', () => {
       [sharedTermId]
     );
     expect(checkSharedRes.rows[0].tf_body).toBe(3);
-    expect(checkSharedRes.rows[0].positions).toEqual([2, 3, 4]);
+    expect(decompressPositions(checkSharedRes.rows[0].positions)).toEqual([2, 3, 4]);
   });
 });

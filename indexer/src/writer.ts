@@ -1,5 +1,7 @@
 import { pool } from './db/client.js';
 import { DocumentIndex } from './indexDocument.js';
+import { compressPositions } from './compression/positionCompress.js';
+
 
 /**
  * Writes a batch of DocumentIndex objects to the database inside a single transaction.
@@ -56,27 +58,39 @@ export async function writeIndexBatch(batch: DocumentIndex[]): Promise<void> {
       [docIds]
     );
 
+    const thresholdDays = parseInt(process.env.HOT_SEGMENT_THRESHOLD_DAYS || '30', 10);
+    const now = new Date();
+
     // 5. Insert postings for each document
     for (const doc of batch) {
+      const docCrawledAt = doc.crawledAt || now;
+      const ageInMs = now.getTime() - docCrawledAt.getTime();
+      const ageInDays = ageInMs / (1000 * 60 * 60 * 24);
+      const segment = ageInDays <= thresholdDays ? 'hot' : 'cold';
+
       for (const [term, info] of doc.terms.entries()) {
         const termId = termIdMap.get(term);
         if (termId === undefined) continue;
 
+        const compressedPositions = compressPositions(info.positions);
+
         await client.query(
-          `INSERT INTO postings (term_id, doc_id, tf_title, tf_heading, tf_body, positions)
-           VALUES ($1, $2, $3, $4, $5, $6)
+          `INSERT INTO postings (term_id, doc_id, tf_title, tf_heading, tf_body, positions, segment)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)
            ON CONFLICT (term_id, doc_id) DO UPDATE SET
              tf_title = EXCLUDED.tf_title,
              tf_heading = EXCLUDED.tf_heading,
              tf_body = EXCLUDED.tf_body,
-             positions = EXCLUDED.positions`,
+             positions = EXCLUDED.positions,
+             segment = EXCLUDED.segment`,
           [
             termId,
             doc.docId,
             info.tf_title,
             info.tf_heading,
             info.tf_body,
-            info.positions,
+            compressedPositions,
+            segment,
           ]
         );
       }

@@ -14,6 +14,7 @@ export interface DocumentIndex {
   docId: number;
   terms: Map<string, TermInfo>;
   fingerprint: string | null;
+  crawledAt?: Date;
 }
 
 /**
@@ -33,6 +34,7 @@ export function indexDocument(page: CrawledPage): DocumentIndex {
       docId: page.id,
       terms: new Map<string, TermInfo>(),
       fingerprint: null,
+      crawledAt: page.crawled_at,
     };
   }
 
@@ -97,5 +99,6 @@ export function indexDocument(page: CrawledPage): DocumentIndex {
     docId: page.id,
     terms,
     fingerprint,
+    crawledAt: page.crawled_at,
   };
 }

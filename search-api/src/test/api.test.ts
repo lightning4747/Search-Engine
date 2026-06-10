@@ -2,6 +2,8 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { app } from '../index.js';
 import { query } from '../db/client.js';
 import { loadTrie } from '../suggest/trieLoader.js';
+import { compressPositions } from '../query/positionCompress.js';
+
 
 describe('Search API Endpoints', () => {
   let server: any;
@@ -68,15 +70,26 @@ describe('Search API Endpoints', () => {
     const crawlerId = termMap.get('crawler')!;
 
     // Insert postings
-    await query(`
-      INSERT INTO postings (term_id, doc_id, tf_title, tf_heading, tf_body, positions)
-      VALUES 
-      (${expressId}, 996001, 1, 0, 1, '{0}'),
-      (${searchId}, 996001, 1, 0, 1, '{1}'),
-      (${apiId}, 996001, 1, 0, 1, '{2}'),
-      (${apiId}, 996002, 1, 0, 1, '{1}'),
-      (${crawlerId}, 996002, 1, 0, 1, '{0}')
-    `);
+    await query(
+      `INSERT INTO postings (term_id, doc_id, tf_title, tf_heading, tf_body, positions) VALUES ($1, $2, $3, $4, $5, $6)`,
+      [expressId, 996001, 1, 0, 1, compressPositions([0])]
+    );
+    await query(
+      `INSERT INTO postings (term_id, doc_id, tf_title, tf_heading, tf_body, positions) VALUES ($1, $2, $3, $4, $5, $6)`,
+      [searchId, 996001, 1, 0, 1, compressPositions([1])]
+    );
+    await query(
+      `INSERT INTO postings (term_id, doc_id, tf_title, tf_heading, tf_body, positions) VALUES ($1, $2, $3, $4, $5, $6)`,
+      [apiId, 996001, 1, 0, 1, compressPositions([2])]
+    );
+    await query(
+      `INSERT INTO postings (term_id, doc_id, tf_title, tf_heading, tf_body, positions) VALUES ($1, $2, $3, $4, $5, $6)`,
+      [apiId, 996002, 1, 0, 1, compressPositions([1])]
+    );
+    await query(
+      `INSERT INTO postings (term_id, doc_id, tf_title, tf_heading, tf_body, positions) VALUES ($1, $2, $3, $4, $5, $6)`,
+      [crawlerId, 996002, 1, 0, 1, compressPositions([0])]
+    );
 
     // Load trie
     await loadTrie();

@@ -1,6 +1,8 @@
 import { query } from '../db/client.js';
 import { RetrievalPlan } from './parser.js';
 import { PostingRow } from '../ranking/ranker.js';
+import { decompressPositions } from './positionCompress.js';
+
 
 /**
  * Given a RetrievalPlan, fetches postings for all must + phrase + proximity terms
@@ -36,7 +38,7 @@ export async function retrievePostings(plan: RetrievalPlan): Promise<PostingRow[
   const excludeTermsArray = plan.exclude.map(t => t.toLowerCase());
 
   let queryText = `
-    SELECT p.doc_id, t.term, p.tf_title, p.tf_heading, p.tf_body, p.positions, t.doc_frequency as df
+    SELECT p.doc_id, t.term, p.tf_title, p.tf_heading, p.tf_body, p.positions, p.segment, t.doc_frequency as df
     FROM postings p
     JOIN terms t ON p.term_id = t.term_id
     WHERE t.term = ANY($1::text[])
@@ -63,7 +65,8 @@ export async function retrievePostings(plan: RetrievalPlan): Promise<PostingRow[
     tf_title: Number(row.tf_title || 0),
     tf_heading: Number(row.tf_heading || 0),
     tf_body: Number(row.tf_body || 0),
-    positions: row.positions || [],
+    positions: decompressPositions(row.positions),
+    segment: row.segment as 'hot' | 'cold',
     df: Number(row.df || 0)
   }));
 }
