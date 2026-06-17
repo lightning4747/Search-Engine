@@ -94,13 +94,13 @@ export default function StatsDashboard() {
     if (lightningWins) {
       return (
         <span style={{ color: 'hsl(var(--primary))', fontWeight: 600 }}>
-          ⚡ Lightning
+           Lightning
         </span>
       );
     } else {
       return (
         <span style={{ color: 'hsl(var(--secondary))', fontWeight: 600 }}>
-          🔍 ES
+           ES
         </span>
       );
     }
@@ -154,7 +154,7 @@ export default function StatsDashboard() {
 
             {/* Benchmark Section */}
             <div style={styles.benchmarkCard} className="glass">
-              <h2 style={styles.benchmarkTitle}>🧪 Benchmark Runner</h2>
+              <h2 style={styles.benchmarkTitle}>Benchmark Runner</h2>
               <p style={styles.benchmarkDesc}>
                 Compare Lightning Engine vs Elasticsearch under a standardized 50-query set, alternating execution orders sequentially.
               </p>

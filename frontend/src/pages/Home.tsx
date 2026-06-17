@@ -76,7 +76,7 @@ export default function Home() {
     <div style={styles.page}>
       {/* Top Navigation */}
       <nav style={styles.nav}>
-        <Link to="/compare" style={styles.compareLink}>⚡ Compare</Link>
+        <Link to="/compare" style={styles.compareLink}>Compare</Link>
         <Link to="/stats" style={styles.navLink}>Stats & Admin</Link>
       </nav>
 

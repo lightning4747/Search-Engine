@@ -12,6 +12,8 @@ export default defineConfig({
       '/document': 'http://localhost:3000',
       '/stats': 'http://localhost:3000',
       '/admin': 'http://localhost:3000',
+      '/es': 'http://localhost:3000',
+      '/benchmark': 'http://localhost:3000',
     }
   }
 })

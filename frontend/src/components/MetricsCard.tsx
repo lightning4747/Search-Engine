@@ -17,7 +17,7 @@ export default function MetricsCard({
 }: MetricsCardProps) {
   const isLightning = engine === 'lightning';
   const displayName = isLightning ? 'Lightning Engine' : 'Elasticsearch';
-  const emoji = isLightning ? '⚡' : '🔍';
+  const emoji = isLightning ? '' : '';
 
   if (loading) {
     return (

@@ -201,7 +201,7 @@ export default function Results() {
             >
               {debugMode ? 'Hide Score' : 'Debug Score'}
             </button>
-            <Link to="/compare" style={styles.compareLink}>⚡ Compare</Link>
+            <Link to="/compare" style={styles.compareLink}>Compare</Link>
             <Link to="/stats" style={styles.statsLink}>Stats</Link>
           </div>
         </div>
