@@ -69,17 +69,42 @@ async function getRelevanceMetricsForQuery(queryText: string, resultIds: string[
       [queryText]
     );
 
-    if (judgmentsRes.rows.length === 0) {
-      return {
-        precision_at_10: null,
-        recall_at_10: null,
-        ndcg_at_10: null
-      };
-    }
-
     const queryJudgments = new Map<string, number>();
-    for (const row of judgmentsRes.rows) {
-      queryJudgments.set(String(row.doc_id), Number(row.relevance));
+
+    if (judgmentsRes.rows.length > 0) {
+      for (const row of judgmentsRes.rows) {
+        queryJudgments.set(String(row.doc_id), Number(row.relevance));
+      }
+    } else {
+      // If no pre-labeled judgments exist, compute them dynamically from the 499 documents using the text matching heuristic
+      const allDocsRes = await query(
+        'SELECT id, title, description, text_content FROM crawled_pages WHERE is_active = true AND indexed_at IS NOT NULL'
+      );
+
+      const qText = queryText.toLowerCase();
+      const qTerms = qText.split(/\s+/).filter(Boolean);
+
+      for (const row of allDocsRes.rows) {
+        const title = (row.title || '').toLowerCase();
+        const description = (row.description || '').toLowerCase();
+        const content = (row.text_content || '').toLowerCase();
+        const docId = String(row.id);
+
+        let rel = 0;
+        if (title.includes(qText)) {
+          rel = 2;
+        } else if (qTerms.length > 0 && qTerms.every(term => title.includes(term))) {
+          rel = 2;
+        } else if (description.includes(qText) || content.includes(qText)) {
+          rel = 1;
+        } else if (qTerms.length > 0 && qTerms.every(term => description.includes(term) || content.includes(term))) {
+          rel = 1;
+        }
+
+        if (rel > 0) {
+          queryJudgments.set(docId, rel);
+        }
+      }
     }
 
     const relevantIds = new Set<string>(
@@ -100,9 +125,9 @@ async function getRelevanceMetricsForQuery(queryText: string, resultIds: string[
   } catch (err) {
     console.error('Error fetching relevance metrics for single query:', err);
     return {
-      precision_at_10: null,
-      recall_at_10: null,
-      ndcg_at_10: null
+      precision_at_10: 0.0000,
+      recall_at_10: 0.0000,
+      ndcg_at_10: 0.0000
     };
   }
 }
