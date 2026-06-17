@@ -76,6 +76,7 @@ export default function Home() {
     <div style={styles.page}>
       {/* Top Navigation */}
       <nav style={styles.nav}>
+        <Link to="/compare" style={styles.compareLink}>⚡ Compare</Link>
         <Link to="/stats" style={styles.navLink}>Stats & Admin</Link>
       </nav>
 
@@ -168,6 +169,7 @@ const styles: Record<string, React.CSSProperties> = {
   nav: {
     display: 'flex',
     justifyContent: 'flex-end',
+    gap: '0.75rem',
     padding: '1.5rem 2rem',
   },
   navLink: {
@@ -175,6 +177,15 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 500,
     fontSize: '0.95rem',
     border: '1px solid hsl(var(--border-color))',
+    padding: '0.4rem 1rem',
+    borderRadius: '8px',
+    transition: 'all 0.15s ease',
+  },
+  compareLink: {
+    color: 'hsl(var(--text-muted))',
+    fontWeight: 500,
+    fontSize: '0.95rem',
+    border: '1px solid hsl(var(--secondary))',
     padding: '0.4rem 1rem',
     borderRadius: '8px',
     transition: 'all 0.15s ease',
