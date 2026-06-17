@@ -35,40 +35,40 @@ export default function Compare() {
     setEsMeta(null);
 
     const lightningStart = performance.now();
-    const esStart = performance.now();
-
-    Promise.allSettled([
-      apiClient.search(trimmedQuery, 1, 10),
-      apiClient.esSearch(trimmedQuery, 1, 10)
-    ]).then(([lightningSettled, esSettled]) => {
-      setLightningLoading(false);
-      if (lightningSettled.status === 'fulfilled') {
-        const val = lightningSettled.value;
+    apiClient.search(trimmedQuery, 1, 10)
+      .then((val) => {
         const elapsed = performance.now() - lightningStart;
         setLightningResults(val.results);
         setLightningMeta({
           tookMs: elapsed,
           totalHits: val.total_hits
         });
-      } else {
-        console.error('Lightning search failed:', lightningSettled.reason);
-        setLightningError(lightningSettled.reason?.message || 'Failed to search Lightning Engine');
-      }
+      })
+      .catch((err) => {
+        console.error('Lightning search failed:', err);
+        setLightningError(err.message || 'Failed to search Lightning Engine');
+      })
+      .finally(() => {
+        setLightningLoading(false);
+      });
 
-      setEsLoading(false);
-      if (esSettled.status === 'fulfilled') {
-        const val = esSettled.value;
+    const esStart = performance.now();
+    apiClient.esSearch(trimmedQuery, 1, 10)
+      .then((val) => {
         const elapsed = performance.now() - esStart;
         setEsResults(val.results);
         setEsMeta({
           tookMs: elapsed,
           totalHits: val.total_hits
         });
-      } else {
-        console.error('Elasticsearch search failed:', esSettled.reason);
-        setEsError(esSettled.reason?.message || 'Failed to search Elasticsearch');
-      }
-    });
+      })
+      .catch((err) => {
+        console.error('Elasticsearch search failed:', err);
+        setEsError(err.message || 'Failed to search Elasticsearch');
+      })
+      .finally(() => {
+        setEsLoading(false);
+      });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -86,7 +86,7 @@ export default function Compare() {
       {/* Header */}
       <header style={styles.header} className="glass">
         <div style={styles.headerContent}>
-          <h1 style={styles.headerTitle}>⚡ Lightning vs Elasticsearch</h1>
+          <h1 style={styles.headerTitle}> Lightning vs Elasticsearch</h1>
           <Link to="/" style={styles.backLink}>← Back to Home</Link>
         </div>
       </header>
