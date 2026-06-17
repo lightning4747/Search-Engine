@@ -17,6 +17,16 @@ import { loadTrie, trie } from './suggest/trieLoader.js';
 import { stem } from './query/stemmer.js';
 import { suggestCorrection } from './query/spellCheck.js';
 import { getSynonyms } from './query/synonyms.js';
+import { esSearch } from './elasticsearch/search.js';
+import { runBenchmark } from './benchmark/runner.js';
+import { getLatestBenchmarkRun, getBenchmarkRunById, getBenchmarkResults } from './benchmark/storage.js';
+import {
+  analyzeLatencies,
+  computePrecisionAtK,
+  computeRecallAtK,
+  computeMRR,
+  computeNDCG
+} from './benchmark/metrics.js';
 
 
 const app = express();
@@ -233,6 +243,25 @@ app.get('/search', async (req, res) => {
   }
 });
 
+// GET /es/search Endpoint
+app.get('/es/search', async (req, res) => {
+  const parsed = searchSchema.safeParse(req.query);
+  
+  if (!parsed.success) {
+    return res.status(400).json({ error: 'Missing or empty query parameter "q"' });
+  }
+
+  const { q, page, limit } = parsed.data;
+
+  try {
+    const searchResponse = await esSearch(q, page, limit);
+    return res.json(searchResponse);
+  } catch (err: any) {
+    console.error('Error in /es/search:', err);
+    return res.status(503).json({ error: 'Elasticsearch service unavailable' });
+  }
+});
+
 // GET /stats Endpoint
 app.get('/stats', async (req, res) => {
   try {
@@ -371,6 +400,159 @@ app.post('/admin/reindex', async (req, res) => {
   } catch (err) {
     console.error('Error in spawning reindex child process:', err);
     return res.status(500).json({ error: 'Failed to start incremental reindexing' });
+  }
+});
+
+// POST /benchmark/run Endpoint
+app.post('/benchmark/run', async (req, res) => {
+  const adminKey = req.headers['x-admin-key'];
+  if (!adminKey || adminKey !== config.xAdminKey) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    const job_id = await runBenchmark();
+    return res.json({
+      job_id,
+      status: 'started',
+      message: 'Benchmark started with 50 queries × 10 runs'
+    });
+  } catch (err: any) {
+    console.error('Error starting benchmark:', err);
+    return res.status(500).json({ error: 'Failed to start benchmark run' });
+  }
+});
+
+// GET /benchmark/results Endpoint
+app.get('/benchmark/results', async (req, res) => {
+  try {
+    const jobId = req.query.job_id as string | undefined;
+    const run = jobId ? await getBenchmarkRunById(jobId) : await getLatestBenchmarkRun();
+
+    if (!run) {
+      return res.status(404).json({ error: 'Benchmark run not found' });
+    }
+
+    if (run.status === 'running') {
+      return res.json({
+        job_id: run.id,
+        status: run.status,
+        created_at: run.created_at,
+        message: 'Benchmark is still running'
+      });
+    }
+
+    if (run.status === 'failed') {
+      return res.json({
+        job_id: run.id,
+        status: run.status,
+        created_at: run.created_at,
+        message: 'Benchmark failed',
+        notes: run.notes
+      });
+    }
+
+    const results = await getBenchmarkResults(run.id);
+
+    const lightningResults = results.filter(r => r.engine === 'lightning');
+    const esResults = results.filter(r => r.engine === 'elasticsearch');
+
+    const lightningLatencies = lightningResults.map(r => r.latency_ms);
+    const esLatencies = esResults.map(r => r.latency_ms);
+
+    const lightningStats = analyzeLatencies(lightningLatencies);
+    const esStats = analyzeLatencies(esLatencies);
+
+    const lightningSumMs = lightningLatencies.reduce((a, b) => a + b, 0);
+    const lightningQps = lightningSumMs > 0 ? Number(((lightningLatencies.length / (lightningSumMs / 1000))).toFixed(2)) : 0;
+
+    const esSumMs = esLatencies.reduce((a, b) => a + b, 0);
+    const esQps = esSumMs > 0 ? Number(((esLatencies.length / (esSumMs / 1000))).toFixed(2)) : 0;
+
+    const judgmentsRes = await query('SELECT query, doc_id, relevance FROM relevance_judgments');
+    const judgmentsMap = new Map<string, Map<string, number>>();
+    for (const row of judgmentsRes.rows) {
+      const qText = row.query;
+      const docId = String(row.doc_id);
+      const rel = Number(row.relevance);
+
+      if (!judgmentsMap.has(qText)) {
+        judgmentsMap.set(qText, new Map());
+      }
+      judgmentsMap.get(qText)!.set(docId, rel);
+    }
+
+    const computeRelevanceForEngine = (engineResults: typeof results) => {
+      const queryResultsMap = new Map<string, string[]>();
+      for (const r of engineResults) {
+        if (r.attempt === 1) {
+          queryResultsMap.set(r.query, r.result_ids);
+        }
+      }
+
+      let sumPrecision = 0;
+      let sumRecall = 0;
+      let sumNDCG = 0;
+      const resultsForMRR: { query: string; retrievedIds: string[] }[] = [];
+
+      for (const [qText, retrievedIds] of queryResultsMap.entries()) {
+        const queryJudgments = judgmentsMap.get(qText) || new Map<string, number>();
+        const relevantIds = new Set<string>(
+          Array.from(queryJudgments.entries())
+            .filter(([_, rel]) => rel > 0)
+            .map(([id]) => id)
+        );
+
+        sumPrecision += computePrecisionAtK(retrievedIds, relevantIds, 10);
+        sumRecall += computeRecallAtK(retrievedIds, relevantIds, 10);
+        sumNDCG += computeNDCG(retrievedIds, queryJudgments, 10);
+        resultsForMRR.push({ query: qText, retrievedIds });
+      }
+
+      const count = queryResultsMap.size;
+      return {
+        precision_at_10: count > 0 ? Number((sumPrecision / count).toFixed(4)) : 0,
+        recall_at_10: count > 0 ? Number((sumRecall / count).toFixed(4)) : 0,
+        mrr: count > 0 ? Number((computeMRR(resultsForMRR, judgmentsMap)).toFixed(4)) : 0,
+        ndcg_at_10: count > 0 ? Number((sumNDCG / count).toFixed(4)) : 0
+      };
+    };
+
+    const lightningRelevance = computeRelevanceForEngine(lightningResults);
+    const esRelevance = computeRelevanceForEngine(esResults);
+
+    return res.json({
+      job_id: run.id,
+      status: run.status,
+      created_at: run.created_at,
+      notes: run.notes,
+      lightning: {
+        avg_ms: lightningStats.avg,
+        p50_ms: lightningStats.p50,
+        p95_ms: lightningStats.p95,
+        p99_ms: lightningStats.p99,
+        qps: lightningQps,
+        precision_at_10: lightningRelevance.precision_at_10,
+        recall_at_10: lightningRelevance.recall_at_10,
+        mrr: lightningRelevance.mrr,
+        ndcg_at_10: lightningRelevance.ndcg_at_10
+      },
+      elasticsearch: {
+        avg_ms: esStats.avg,
+        p50_ms: esStats.p50,
+        p95_ms: esStats.p95,
+        p99_ms: esStats.p99,
+        qps: esQps,
+        precision_at_10: esRelevance.precision_at_10,
+        recall_at_10: esRelevance.recall_at_10,
+        mrr: esRelevance.mrr,
+        ndcg_at_10: esRelevance.ndcg_at_10
+      }
+    });
+
+  } catch (err) {
+    console.error('Error getting benchmark results:', err);
+    return res.status(500).json({ error: 'Internal server error' });
   }
 });
 
