@@ -131,12 +131,11 @@ export const apiClient = {
     return request<EsSearchResponse>(`/es/search?${params.toString()}`);
   },
 
-  async runBenchmark(adminKey: string): Promise<{ job_id: string; status: string; message: string }> {
+  async runBenchmark(): Promise<{ job_id: string; status: string; message: string }> {
     return request<{ job_id: string; status: string; message: string }>('/benchmark/run', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'X-Admin-Key': adminKey
+        'Content-Type': 'application/json'
       }
     });
   },

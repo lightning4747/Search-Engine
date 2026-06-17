@@ -10,7 +10,7 @@ export default function StatsDashboard() {
   const [error, setError] = useState<string | null>(null);
 
   // Benchmark Runner state
-  const [adminKey, setAdminKey] = useState('');
+
   const [benchStatus, setBenchStatus] = useState<'idle' | 'running' | 'completed' | 'failed'>('idle');
   const [benchError, setBenchError] = useState<string | null>(null);
   const [benchJobId, setBenchJobId] = useState<string | null>(null);
@@ -69,15 +69,11 @@ export default function StatsDashboard() {
   }, [benchStatus, benchJobId]);
 
   const handleRunBenchmark = () => {
-    if (!adminKey.trim()) {
-      setBenchError('Admin key is required');
-      return;
-    }
     setBenchStatus('running');
     setBenchError(null);
     setBenchResults(null);
 
-    apiClient.runBenchmark(adminKey.trim())
+    apiClient.runBenchmark()
       .then(res => {
         setBenchJobId(res.job_id);
       })
@@ -159,15 +155,7 @@ export default function StatsDashboard() {
                 Compare Lightning Engine vs Elasticsearch under a standardized 50-query set, alternating execution orders sequentially.
               </p>
 
-              {/* Admin key input */}
-              <div style={styles.adminActionRow}>
-                <input
-                  type="password"
-                  value={adminKey}
-                  onChange={(e) => setAdminKey(e.target.value)}
-                  placeholder="Enter admin key..."
-                  style={styles.adminInput}
-                />
+              <div style={{ marginTop: '0.5rem' }}>
                 <button
                   onClick={handleRunBenchmark}
                   disabled={benchStatus === 'running'}
@@ -399,22 +387,7 @@ const styles: Record<string, CSSProperties> = {
     color: 'hsl(var(--text-muted))',
     lineHeight: '1.5',
   },
-  adminActionRow: {
-    display: 'flex',
-    gap: '1rem',
-    width: '100%',
-    maxWidth: '550px',
-    marginTop: '0.5rem',
-  },
-  adminInput: {
-    flex: 1,
-    backgroundColor: 'hsla(var(--bg-card), 0.6)',
-    border: '1px solid hsl(var(--border-color))',
-    borderRadius: '8px',
-    padding: '0.5rem 0.8rem',
-    color: 'hsl(var(--text-main))',
-    outline: 'none',
-  },
+
   runBtn: {
     backgroundColor: 'hsl(var(--primary))',
     color: 'hsl(var(--bg-main))',

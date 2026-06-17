@@ -159,7 +159,6 @@ Reported aggregate metrics:
 | MRR | Mean Reciprocal Rank across all queries |
 | NDCG@10 | Mean Normalized Discounted Cumulative Gain |
 
-Triggering the runner requires the `x-admin-key` request header.
 
 ---
 
@@ -180,3 +179,5 @@ For detailed specifications and user guides, refer to the [Documentation](./docs
 In some cases, my search engine may be faster than Elasticsearch, but that does not necessarily mean it is superior. One reason is that my engine may be able to access data directly from memory more efficiently, while Elasticsearch could experience additional overhead, especially when running in a Docker container. To ensure a fair comparison, benchmarks should be performed using new or unseen queries rather than repeated ones that may benefit from caching.
 
 Another important factor is search quality. While latency is easy to measure, relevance and accuracy are often more important in real-world search systems. Currently, there is a significant gap in result quality between my search engine and Elasticsearch, which is something that must be considered alongside performance when evaluating the two systems.
+
+Finally, I only tested the engine on around 500 pages 🥀. I know that's nowhere near enough to draw strong conclusions, but I do not have the resources to scale the experiment further. That said, I am satisfied with what I learned from building the project, and the experience was more valuable.

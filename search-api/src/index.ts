@@ -483,11 +483,6 @@ app.post('/admin/reindex', async (req, res) => {
 
 // POST /benchmark/run Endpoint
 app.post('/benchmark/run', async (req, res) => {
-  const adminKey = req.headers['x-admin-key'];
-  if (!adminKey || adminKey !== config.xAdminKey) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-
   try {
     const job_id = await runBenchmark();
     return res.json({
