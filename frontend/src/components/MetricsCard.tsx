@@ -4,8 +4,12 @@ interface MetricsCardProps {
   engine: 'lightning' | 'elasticsearch';
   tookMs: number | null;
   totalHits: number | null;
-  isWinner: boolean;
+  isWinner: boolean; // Speed winner
+  isAccuracyWinner: boolean; // Accuracy winner
   loading: boolean;
+  precisionAtK?: number | null;
+  recallAtK?: number | null;
+  ndcgAtK?: number | null;
 }
 
 export default function MetricsCard({
@@ -13,11 +17,14 @@ export default function MetricsCard({
   tookMs,
   totalHits,
   isWinner,
-  loading
+  isAccuracyWinner,
+  loading,
+  precisionAtK,
+  recallAtK,
+  ndcgAtK
 }: MetricsCardProps) {
   const isLightning = engine === 'lightning';
   const displayName = isLightning ? 'Lightning Engine' : 'Elasticsearch';
-  const emoji = isLightning ? '' : '';
 
   if (loading) {
     return (
@@ -25,21 +32,31 @@ export default function MetricsCard({
         <div style={styles.skeletonTitle}></div>
         <div style={styles.skeletonRow}></div>
         <div style={styles.skeletonRow}></div>
+        <div style={styles.skeletonRow}></div>
       </div>
     );
   }
 
+  const hasAccuracy = ndcgAtK !== undefined && ndcgAtK !== null;
+
   return (
-    <div style={{ ...styles.card, ...(isWinner ? styles.winnerCard : {}) }} className="glass animate-fade-in">
+    <div style={{ ...styles.card, ...((isWinner || isAccuracyWinner) ? styles.winnerCard : {}) }} className="glass animate-fade-in">
       <div style={styles.header}>
         <h3 style={styles.title}>
-          <span style={styles.emoji}>{emoji}</span> {displayName}
+          {displayName}
         </h3>
-        {isWinner && (
-          <span style={styles.winnerBadge}>
-            🏆 Faster
-          </span>
-        )}
+        <div style={styles.badgeContainer}>
+          {isWinner && (
+            <span style={styles.winnerBadge}>
+              Faster
+            </span>
+          )}
+          {isAccuracyWinner && (
+            <span style={styles.accuracyBadge}>
+              Better Accuracy
+            </span>
+          )}
+        </div>
       </div>
 
       <div style={styles.body}>
@@ -59,6 +76,30 @@ export default function MetricsCard({
           <span style={styles.label}>Results Shown:</span>
           <span style={styles.value}>10</span>
         </div>
+
+        {hasAccuracy && (
+          <>
+            <div style={styles.divider}></div>
+            <div style={styles.row}>
+              <span style={styles.label}>NDCG@10 (Relevance):</span>
+              <span style={{ ...styles.value, color: isAccuracyWinner ? 'hsl(var(--primary))' : 'hsl(var(--text-main))' }}>
+                {ndcgAtK.toFixed(4)}
+              </span>
+            </div>
+            <div style={styles.row}>
+              <span style={styles.label}>Precision@10:</span>
+              <span style={styles.value}>
+                {precisionAtK !== undefined && precisionAtK !== null ? precisionAtK.toFixed(4) : '--'}
+              </span>
+            </div>
+            <div style={styles.row}>
+              <span style={styles.label}>Recall@10:</span>
+              <span style={styles.value}>
+                {recallAtK !== undefined && recallAtK !== null ? recallAtK.toFixed(4) : '--'}
+              </span>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -82,6 +123,8 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: '0.5rem',
+    flexWrap: 'wrap',
   },
   title: {
     fontSize: '1.15rem',
@@ -90,8 +133,9 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     gap: '0.5rem',
   },
-  emoji: {
-    fontSize: '1.2rem',
+  badgeContainer: {
+    display: 'flex',
+    gap: '0.4rem',
   },
   winnerBadge: {
     backgroundColor: 'hsla(0, 0%, 100%, 0.1)',
@@ -101,6 +145,18 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '0.25rem 0.6rem',
     borderRadius: '12px',
     border: '1px solid hsla(0, 0%, 100%, 0.15)',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.25rem',
+  },
+  accuracyBadge: {
+    backgroundColor: 'hsla(var(--primary), 0.15)',
+    color: 'hsl(var(--text-main))',
+    fontSize: '0.75rem',
+    fontWeight: 600,
+    padding: '0.25rem 0.6rem',
+    borderRadius: '12px',
+    border: '1px solid hsla(var(--primary), 0.25)',
     display: 'flex',
     alignItems: 'center',
     gap: '0.25rem',
@@ -121,6 +177,11 @@ const styles: Record<string, React.CSSProperties> = {
   value: {
     color: 'hsl(var(--text-main))',
     fontWeight: 500,
+  },
+  divider: {
+    height: '1px',
+    backgroundColor: 'hsla(var(--border-color), 0.5)',
+    margin: '0.5rem 0',
   },
   skeletonTitle: {
     height: '24px',

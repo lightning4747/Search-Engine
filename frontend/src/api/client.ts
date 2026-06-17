@@ -14,6 +14,9 @@ export interface SearchResponse {
   page: number;
   results: SearchResult[];
   took_ms: number;
+  precision_at_10?: number | null;
+  recall_at_10?: number | null;
+  ndcg_at_10?: number | null;
 }
 
 export interface StatsResponse {

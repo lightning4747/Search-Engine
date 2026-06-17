@@ -62,6 +62,51 @@ const searchSchema = z.object({
   limit: z.coerce.number().int().positive().max(100).default(10)
 });
 
+async function getRelevanceMetricsForQuery(queryText: string, resultIds: string[]) {
+  try {
+    const judgmentsRes = await query(
+      'SELECT doc_id, relevance FROM relevance_judgments WHERE query = $1',
+      [queryText]
+    );
+
+    if (judgmentsRes.rows.length === 0) {
+      return {
+        precision_at_10: null,
+        recall_at_10: null,
+        ndcg_at_10: null
+      };
+    }
+
+    const queryJudgments = new Map<string, number>();
+    for (const row of judgmentsRes.rows) {
+      queryJudgments.set(String(row.doc_id), Number(row.relevance));
+    }
+
+    const relevantIds = new Set<string>(
+      Array.from(queryJudgments.entries())
+        .filter(([_, rel]) => rel > 0)
+        .map(([id]) => id)
+    );
+
+    const precision_at_10 = Number(computePrecisionAtK(resultIds, relevantIds, 10).toFixed(4));
+    const recall_at_10 = Number(computeRecallAtK(resultIds, relevantIds, 10).toFixed(4));
+    const ndcg_at_10 = Number(computeNDCG(resultIds, queryJudgments, 10).toFixed(4));
+
+    return {
+      precision_at_10,
+      recall_at_10,
+      ndcg_at_10
+    };
+  } catch (err) {
+    console.error('Error fetching relevance metrics for single query:', err);
+    return {
+      precision_at_10: null,
+      recall_at_10: null,
+      ndcg_at_10: null
+    };
+  }
+}
+
 // GET /search Endpoint
 app.get('/search', async (req, res) => {
   const start = performance.now();
@@ -228,13 +273,16 @@ app.get('/search', async (req, res) => {
     }
 
     const took_ms = Number((performance.now() - start).toFixed(2));
+    const resultIds = results.map(r => r.id);
+    const relevanceMetrics = await getRelevanceMetricsForQuery(q, resultIds);
     return res.json({
       query: q,
       total_hits: totalHits,
       page,
       results,
       did_you_mean,
-      took_ms
+      took_ms,
+      ...relevanceMetrics
     });
 
   } catch (err) {
@@ -255,7 +303,12 @@ app.get('/es/search', async (req, res) => {
 
   try {
     const searchResponse = await esSearch(q, page, limit);
-    return res.json(searchResponse);
+    const resultIds = searchResponse.results.map(r => r.id);
+    const relevanceMetrics = await getRelevanceMetricsForQuery(q, resultIds);
+    return res.json({
+      ...searchResponse,
+      ...relevanceMetrics
+    });
   } catch (err: any) {
     console.error('Error in /es/search:', err);
     return res.status(503).json({ error: 'Elasticsearch service unavailable' });

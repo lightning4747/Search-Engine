@@ -4,13 +4,21 @@ import { apiClient, type SearchResult } from '../api/client';
 import MetricsCard from '../components/MetricsCard';
 import CompareResultCard from '../components/CompareResultCard';
 
+interface EngineMeta {
+  tookMs: number;
+  totalHits: number;
+  precisionAt10?: number | null;
+  recallAt10?: number | null;
+  ndcgAt10?: number | null;
+}
+
 export default function Compare() {
   const [query, setQuery] = useState('');
   const [lightningResults, setLightningResults] = useState<SearchResult[] | null>(null);
   const [esResults, setEsResults] = useState<SearchResult[] | null>(null);
 
-  const [lightningMeta, setLightningMeta] = useState<{ tookMs: number; totalHits: number } | null>(null);
-  const [esMeta, setEsMeta] = useState<{ tookMs: number; totalHits: number } | null>(null);
+  const [lightningMeta, setLightningMeta] = useState<EngineMeta | null>(null);
+  const [esMeta, setEsMeta] = useState<EngineMeta | null>(null);
 
   const [lightningLoading, setLightningLoading] = useState(false);
   const [esLoading, setEsLoading] = useState(false);
@@ -41,7 +49,10 @@ export default function Compare() {
         setLightningResults(val.results);
         setLightningMeta({
           tookMs: elapsed,
-          totalHits: val.total_hits
+          totalHits: val.total_hits,
+          precisionAt10: val.precision_at_10,
+          recallAt10: val.recall_at_10,
+          ndcgAt10: val.ndcg_at_10
         });
       })
       .catch((err) => {
@@ -59,7 +70,10 @@ export default function Compare() {
         setEsResults(val.results);
         setEsMeta({
           tookMs: elapsed,
-          totalHits: val.total_hits
+          totalHits: val.total_hits,
+          precisionAt10: val.precision_at_10,
+          recallAt10: val.recall_at_10,
+          ndcgAt10: val.ndcg_at_10
         });
       })
       .catch((err) => {
@@ -81,12 +95,18 @@ export default function Compare() {
   const lightningWinner = bothLoaded && lightningMeta!.tookMs < esMeta!.tookMs;
   const esWinner = bothLoaded && esMeta!.tookMs < lightningMeta!.tookMs;
 
+  const bothHaveAccuracy = bothLoaded &&
+    lightningMeta!.ndcgAt10 !== undefined && lightningMeta!.ndcgAt10 !== null &&
+    esMeta!.ndcgAt10 !== undefined && esMeta!.ndcgAt10 !== null;
+  const lightningAccuracyWinner = bothHaveAccuracy && lightningMeta!.ndcgAt10! > esMeta!.ndcgAt10!;
+  const esAccuracyWinner = bothHaveAccuracy && esMeta!.ndcgAt10! > lightningMeta!.ndcgAt10!;
+
   return (
     <div style={styles.page}>
       {/* Header */}
       <header style={styles.header} className="glass">
         <div style={styles.headerContent}>
-          <h1 style={styles.headerTitle}> Lightning vs Elasticsearch</h1>
+          <h1 style={styles.headerTitle}>Lightning vs Elasticsearch</h1>
           <Link to="/" style={styles.backLink}>← Back to Home</Link>
         </div>
       </header>
@@ -120,6 +140,10 @@ export default function Compare() {
                 tookMs={lightningMeta ? lightningMeta.tookMs : null}
                 totalHits={lightningMeta ? lightningMeta.totalHits : null}
                 isWinner={lightningWinner}
+                isAccuracyWinner={lightningAccuracyWinner}
+                precisionAtK={lightningMeta ? lightningMeta.precisionAt10 : null}
+                recallAtK={lightningMeta ? lightningMeta.recallAt10 : null}
+                ndcgAtK={lightningMeta ? lightningMeta.ndcgAt10 : null}
                 loading={lightningLoading}
               />
 
@@ -154,6 +178,10 @@ export default function Compare() {
                 tookMs={esMeta ? esMeta.tookMs : null}
                 totalHits={esMeta ? esMeta.totalHits : null}
                 isWinner={esWinner}
+                isAccuracyWinner={esAccuracyWinner}
+                precisionAtK={esMeta ? esMeta.precisionAt10 : null}
+                recallAtK={esMeta ? esMeta.recallAt10 : null}
+                ndcgAtK={esMeta ? esMeta.ndcgAt10 : null}
                 loading={esLoading}
               />
 
