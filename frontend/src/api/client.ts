@@ -35,6 +35,30 @@ export interface DocResponse {
   doc_length: number | null;
 }
 
+export interface EsSearchResponse extends SearchResponse {}
+
+export interface EngineStats {
+  avg_ms: number;
+  p50_ms: number;
+  p95_ms: number;
+  p99_ms: number;
+  qps: number;
+  precision_at_10: number;
+  recall_at_10: number;
+  mrr: number;
+  ndcg_at_10: number;
+}
+
+export interface BenchmarkJobResult {
+  job_id: string;
+  status: 'running' | 'completed' | 'failed';
+  created_at: string;
+  notes?: string | null;
+  message?: string;
+  lightning?: EngineStats;
+  elasticsearch?: EngineStats;
+}
+
 export class ApiError extends Error {
   status: number;
   constructor(status: number, message: string) {
@@ -93,5 +117,29 @@ export const apiClient = {
         'X-Admin-Key': adminKey
       }
     });
+  },
+
+  async esSearch(q: string, page = 1, limit = 10): Promise<EsSearchResponse> {
+    const params = new URLSearchParams({
+      q,
+      page: String(page),
+      limit: String(limit)
+    });
+    return request<EsSearchResponse>(`/es/search?${params.toString()}`);
+  },
+
+  async runBenchmark(adminKey: string): Promise<{ job_id: string; status: string; message: string }> {
+    return request<{ job_id: string; status: string; message: string }>('/benchmark/run', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Admin-Key': adminKey
+      }
+    });
+  },
+
+  async getBenchmarkResults(jobId?: string): Promise<BenchmarkJobResult> {
+    const url = jobId ? `/benchmark/results?job_id=${jobId}` : '/benchmark/results';
+    return request<BenchmarkJobResult>(url);
   }
 };
