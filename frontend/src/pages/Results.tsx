@@ -201,6 +201,7 @@ export default function Results() {
             >
               {debugMode ? 'Hide Score' : 'Debug Score'}
             </button>
+            <Link to="/compare" style={styles.compareLink}>⚡ Compare</Link>
             <Link to="/stats" style={styles.statsLink}>Stats</Link>
           </div>
         </div>
@@ -459,6 +460,14 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '0.4rem 0.8rem',
     borderRadius: '6px',
     border: '1px solid hsl(var(--border-color))',
+    color: 'hsl(var(--text-muted))',
+  },
+  compareLink: {
+    fontSize: '0.85rem',
+    fontWeight: 500,
+    padding: '0.4rem 0.8rem',
+    borderRadius: '6px',
+    border: '1px solid hsl(var(--secondary))',
     color: 'hsl(var(--text-muted))',
   },
   mainContainer: {
