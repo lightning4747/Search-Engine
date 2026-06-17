@@ -3,6 +3,7 @@ import Home from './pages/Home';
 import Results from './pages/Results';
 import DocumentViewer from './pages/DocumentViewer';
 import StatsDashboard from './pages/StatsDashboard';
+import Compare from './pages/Compare';
 
 function App() {
   return (
@@ -12,6 +13,7 @@ function App() {
         <Route path="/results" element={<Results />} />
         <Route path="/document/:id" element={<DocumentViewer />} />
         <Route path="/stats" element={<StatsDashboard />} />
+        <Route path="/compare" element={<Compare />} />
       </Routes>
     </Router>
   );
